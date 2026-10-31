@@ -1,0 +1,53 @@
+# ==============================================================================
+# Flutter / Dart
+# ==============================================================================
+**/build/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.pub-cache/
+**/.pub/
+
+# Android
+flutter_app/android/.gradle/
+flutter_app/android/local.properties
+flutter_app/android/app/build/
+flutter_app/android/captures/
+flutter_app/android/.externalNativeBuild/
+
+# Windows desktop
+flutter_app/windows/flutter/ephemeral/
+
+# ==============================================================================
+# .NET / Visual Studio
+# ==============================================================================
+**/bin/
+**/obj/
+**/.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# ==============================================================================
+# Legacy Static Web (Ignored)
+# ==============================================================================
+/assets/
+/css/
+/js/
+index.html
+manifest.json
+sw.js
+
+# ==============================================================================
+# IDE & System
+# ==============================================================================
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini
+.gemini/
+scratch/
+App_Data/

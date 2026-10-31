@@ -1,0 +1,58 @@
+name: Build Flutter APK
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - dev
+  pull_request:
+    branches:
+      - main
+      - master
+      - dev
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java (JDK 17)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Verify Flutter Installation
+        run: flutter --version
+
+      - name: Install Dependencies
+        working-directory: flutter_app
+        run: flutter pub get
+
+      - name: Analyze Project
+        working-directory: flutter_app
+        run: flutter analyze lib || true
+
+      - name: Build Release APK
+        working-directory: flutter_app
+        run: flutter build apk --release
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: islamic-app-release-apk
+          path: flutter_app/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
