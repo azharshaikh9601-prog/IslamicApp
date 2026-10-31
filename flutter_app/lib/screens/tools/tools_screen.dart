@@ -102,15 +102,17 @@ class _ToolsScreenState extends State<ToolsScreen>
                 border: Border.all(color: AppColors.borderEmerald),
               ),
               child: DropdownButtonHideUnderline(
-                child: DropdownButton<DhikrModel>(
-                  value: currentDhikr,
+                child: DropdownButton<String>(
+                  value: InitialData.dhikrList.any((d) => d.id == currentDhikr.id)
+                      ? currentDhikr.id
+                      : InitialData.dhikrList.first.id,
                   dropdownColor: AppColors.darkEmerald,
                   icon: const Icon(Icons.arrow_drop_down,
                       color: AppColors.primaryGold),
                   isExpanded: true,
                   items: InitialData.dhikrList.map((dhikr) {
-                    return DropdownMenuItem(
-                      value: dhikr,
+                    return DropdownMenuItem<String>(
+                      value: dhikr.id,
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -133,9 +135,13 @@ class _ToolsScreenState extends State<ToolsScreen>
                       ),
                     );
                   }).toList(),
-                  onChanged: (newDhikr) {
-                    if (newDhikr != null) {
-                      appState.selectDhikr(newDhikr);
+                  onChanged: (newDhikrId) {
+                    if (newDhikrId != null) {
+                      final selected = InitialData.dhikrList.firstWhere(
+                        (d) => d.id == newDhikrId,
+                        orElse: () => InitialData.dhikrList.first,
+                      );
+                      appState.selectDhikr(selected);
                     }
                   },
                 ),
