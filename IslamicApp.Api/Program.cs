@@ -59,6 +59,50 @@ app.MapGet("/api/health", (SqlDatabaseService db) => Results.Ok(new
 }));
 
 // ---------------------------------------------------------------------------
+// In-App Video & Shorts Player Embed (Fixes YouTube Error 153 with valid HTTP Referrer)
+// ---------------------------------------------------------------------------
+app.MapGet("/api/player", (string? v, bool? isShort) =>
+{
+    var videoId = v ?? "";
+    var loopParam = (isShort == true) ? $"&loop=1&playlist={videoId}" : "";
+    var html = $@"<!DOCTYPE html>
+<html>
+<head>
+  <meta charset=""utf-8"">
+  <meta name=""viewport"" content=""width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"">
+  <meta name=""referrer"" content=""strict-origin-when-cross-origin"">
+  <style>
+    * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+    html, body {{
+      width: 100%;
+      height: 100%;
+      background-color: #000000;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }}
+    iframe {{
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }}
+  </style>
+</head>
+<body>
+  <iframe
+    src=""https://www.youtube-nocookie.com/embed/{videoId}?autoplay=1&controls=1&rel=0&playsinline=1&modestbranding=1{loopParam}""
+    title=""Hafiz Hasnain Video Player""
+    referrerpolicy=""strict-origin-when-cross-origin""
+    allow=""accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share""
+    allowfullscreen>
+  </iframe>
+</body>
+</html>";
+    return Results.Content(html, "text/html");
+});
+
+// ---------------------------------------------------------------------------
 // Scholar Profile
 // ---------------------------------------------------------------------------
 app.MapGet("/api/profile", async (SqlDatabaseService db) => Results.Ok(await db.GetProfileAsync()));

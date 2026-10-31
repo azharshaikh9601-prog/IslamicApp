@@ -2,13 +2,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:webview_windows/webview_windows.dart';
 import '../../core/theme/app_colors.dart';
+import '../../services/api_service.dart';
 
 Widget buildShortsPlayer({
+  Key? key,
   required String youtubeId,
   required String title,
   VoidCallback? onWatched,
 }) {
   return WindowsShortsPlayer(
+    key: key,
     youtubeId: youtubeId,
     title: title,
     onWatched: onWatched,
@@ -47,16 +50,31 @@ class _WindowsShortsPlayerState extends State<WindowsShortsPlayer> {
     _initWebView();
   }
 
+  @override
+  void didUpdateWidget(covariant WindowsShortsPlayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.youtubeId != widget.youtubeId && _isInitialized) {
+      _loadCurrentShort();
+    }
+  }
+
+  Future<void> _loadCurrentShort() async {
+    final backendPlayerUrl =
+        '${ApiService.baseUrl}/player?v=${widget.youtubeId}&isShort=true';
+    try {
+      await _controller.loadUrl(backendPlayerUrl);
+    } catch (_) {
+      await _controller.loadStringContent(
+          _buildEmbedHtml(widget.youtubeId, isShort: true));
+    }
+  }
+
   Future<void> _initWebView() async {
     try {
       await _controller.initialize();
       await _controller.setBackgroundColor(Colors.black);
 
-      // Official YouTube Embed URL with auto-play & loop
-      final embedUrl =
-          'https://www.youtube.com/embed/${widget.youtubeId}?autoplay=1&controls=1&rel=0&playsinline=1&modestbranding=1&loop=1';
-
-      await _controller.loadUrl(embedUrl);
+      await _loadCurrentShort();
 
       if (!mounted) return;
       setState(() {
@@ -68,6 +86,44 @@ class _WindowsShortsPlayerState extends State<WindowsShortsPlayer> {
         _hasError = true;
       });
     }
+  }
+
+  static String _buildEmbedHtml(String videoId, {required bool isShort}) {
+    final loopParam = isShort ? '&loop=1&playlist=$videoId' : '';
+    return '''<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background-color: #000000;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+  </style>
+</head>
+<body>
+  <iframe
+    src="https://www.youtube-nocookie.com/embed/$videoId?autoplay=1&controls=1&rel=0&playsinline=1&modestbranding=1$loopParam"
+    title="Hafiz Hasnain Short Player"
+    referrerpolicy="strict-origin-when-cross-origin"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    allowfullscreen>
+  </iframe>
+</body>
+</html>''';
   }
 
   @override
@@ -110,7 +166,6 @@ class _WindowsShortsPlayerState extends State<WindowsShortsPlayer> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // High-res preview while webview initializes
           if (!_isInitialized)
             Image.network(
               'https://img.youtube.com/vi/${widget.youtubeId}/hqdefault.jpg',
@@ -128,7 +183,6 @@ class _WindowsShortsPlayerState extends State<WindowsShortsPlayer> {
               ),
             ),
 
-          // Live Native WebView2 YouTube Player
           if (_isInitialized)
             Webview(_controller),
         ],

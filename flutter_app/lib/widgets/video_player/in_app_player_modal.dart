@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/video_model.dart';
 import '../../models/playlist_model.dart';
@@ -314,6 +315,24 @@ class _InAppPlayerModalState extends State<InAppPlayerModal> {
                         ),
                       ),
                       tooltip: 'Save',
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: () {
+                        final uri = Uri.parse(
+                            'https://www.youtube.com/watch?v=${_currentVideo.youtubeId}');
+                        launchUrl(uri, mode: LaunchMode.externalApplication);
+                      },
+                      icon: const Icon(Icons.open_in_new_rounded,
+                          color: AppColors.brightGold, size: 20),
+                      style: IconButton.styleFrom(
+                        backgroundColor: const Color(0xFF0C241C),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          side: const BorderSide(color: AppColors.borderEmerald),
+                        ),
+                      ),
+                      tooltip: 'Open in YouTube',
                     ),
                     const SizedBox(width: 8),
                     IconButton(
