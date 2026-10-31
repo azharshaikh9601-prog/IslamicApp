@@ -56,3 +56,4 @@ jobs:
           name: islamic-app-release-apk
           path: flutter_app/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
+
