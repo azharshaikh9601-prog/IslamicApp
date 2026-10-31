@@ -59,13 +59,11 @@ class _WindowsInAppVideoPlayerState extends State<WindowsInAppVideoPlayer> {
   }
 
   Future<void> _loadCurrentVideo() async {
-    final backendPlayerUrl =
-        '${ApiService.baseUrl}/player?v=${widget.youtubeId}&isShort=false';
     try {
-      await _controller.loadUrl(backendPlayerUrl);
-    } catch (_) {
       await _controller.loadStringContent(
           _buildEmbedHtml(widget.youtubeId, isShort: false));
+    } catch (e) {
+      debugPrint('Error loading video HTML: $e');
     }
   }
 
