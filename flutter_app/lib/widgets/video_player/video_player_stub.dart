@@ -41,7 +41,11 @@ class _WindowsInAppVideoPlayerState extends State<WindowsInAppVideoPlayer> {
   @override
   void initState() {
     super.initState();
-    widget.onWatched?.call();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        widget.onWatched?.call();
+      }
+    });
     _initWebView();
   }
 

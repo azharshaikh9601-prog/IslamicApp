@@ -438,21 +438,25 @@ class _InAppPlayerModalState extends State<InAppPlayerModal> {
                     final isCurrent = idx == _currentIndex;
                     final isTrackWatched = appState.isVideoWatched(track.id);
 
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      decoration: BoxDecoration(
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Material(
                         color: isCurrent
                             ? AppColors.primaryGold.withOpacity(0.12)
                             : const Color(0xFF082218),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: isCurrent
-                              ? AppColors.brightGold
-                              : AppColors.borderEmerald,
-                          width: isCurrent ? 1.2 : 0.8,
-                        ),
-                      ),
-                      child: ListTile(
+                        clipBehavior: Clip.antiAlias,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isCurrent
+                                  ? AppColors.brightGold
+                                  : AppColors.borderEmerald,
+                              width: isCurrent ? 1.2 : 0.8,
+                            ),
+                          ),
+                          child: ListTile(
                         onTap: () => _playTrackAt(idx),
                         dense: true,
                         contentPadding: const EdgeInsets.symmetric(
@@ -504,6 +508,8 @@ class _InAppPlayerModalState extends State<InAppPlayerModal> {
                             ? const Icon(Icons.check_circle_rounded,
                                 color: Colors.redAccent, size: 16)
                             : null,
+                      ),
+                        ),
                       ),
                     );
                   }),

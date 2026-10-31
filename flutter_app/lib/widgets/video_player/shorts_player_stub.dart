@@ -39,7 +39,11 @@ class _WindowsShortsPlayerState extends State<WindowsShortsPlayer> {
   @override
   void initState() {
     super.initState();
-    widget.onWatched?.call();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        widget.onWatched?.call();
+      }
+    });
     _initWebView();
   }
 

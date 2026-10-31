@@ -245,13 +245,16 @@ class ScholarProfileScreen extends StatelessWidget {
             const SizedBox(height: 18),
 
             // Official Information List
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.darkCard,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.borderEmerald),
-              ),
-              child: Column(
+            Material(
+              color: AppColors.darkCard,
+              borderRadius: BorderRadius.circular(16),
+              clipBehavior: Clip.antiAlias,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.borderEmerald),
+                ),
+                child: Column(
                 children: [
                   _buildInfoTile(
                     icon: Icons.language,
@@ -276,6 +279,7 @@ class ScholarProfileScreen extends StatelessWidget {
                 ],
               ),
             ),
+          ),
           ],
         );
       },
