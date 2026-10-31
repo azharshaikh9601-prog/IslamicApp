@@ -59,11 +59,13 @@ class _WindowsShortsPlayerState extends State<WindowsShortsPlayer> {
   }
 
   Future<void> _loadCurrentShort() async {
+    final playerUrl =
+        '${ApiService.baseUrl}/player?v=${widget.youtubeId}&isShort=true';
     try {
+      await _controller.loadUrl(playerUrl);
+    } catch (_) {
       await _controller.loadStringContent(
           _buildEmbedHtml(widget.youtubeId, isShort: true));
-    } catch (e) {
-      debugPrint('Error loading short HTML: $e');
     }
   }
 

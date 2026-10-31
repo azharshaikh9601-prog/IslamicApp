@@ -61,10 +61,15 @@ app.MapGet("/api/health", (SqlDatabaseService db) => Results.Ok(new
 // ---------------------------------------------------------------------------
 // In-App Video & Shorts Player Embed (Fixes YouTube Error 153 with valid HTTP Referrer)
 // ---------------------------------------------------------------------------
-app.MapGet("/api/player", (string? v, bool? isShort) =>
+app.MapGet("/api/player", (HttpContext httpContext, string? v, bool? isShort) =>
 {
     var videoId = v ?? "";
-    var loopParam = (isShort == true) ? $"&loop=1&playlist={videoId}" : "";
+    var isShortVideo = isShort == true;
+    var loopParam = isShortVideo ? $"&loop=1&playlist={videoId}" : "";
+    
+    httpContext.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
+    httpContext.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+
     var html = $@"<!DOCTYPE html>
 <html>
 <head>
@@ -91,7 +96,8 @@ app.MapGet("/api/player", (string? v, bool? isShort) =>
 </head>
 <body>
   <iframe
-    src=""https://www.youtube-nocookie.com/embed/{videoId}?autoplay=1&controls=1&rel=0&playsinline=1&modestbranding=1{loopParam}""
+    id=""ytplayer""
+    src=""https://www.youtube.com/embed/{videoId}?autoplay=1&controls=1&rel=0&playsinline=1&modestbranding=1{loopParam}&origin=http://localhost:5000""
     title=""Hafiz Hasnain Video Player""
     referrerpolicy=""strict-origin-when-cross-origin""
     allow=""accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share""
