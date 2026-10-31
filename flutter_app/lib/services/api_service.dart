@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/video_model.dart';
 import '../models/reel_model.dart';
@@ -9,7 +10,33 @@ import '../models/dhikr_model.dart';
 import '../models/prayer_location_model.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://localhost:5000/api';
+  // Local development backend URL
+  static const String _localBaseUrl = 'http://localhost:5000/api';
+
+  // Deployed production backend URL
+  static const String _deployedBaseUrl = 'http://islamicsppapi.runasp.net/api';
+
+  /// Resolves the base API URL dynamically based on environment:
+  /// - Can be overridden via: `flutter run/build --dart-define=API_BASE_URL=...`
+  /// - In Release mode (deployed APK / production): points to `islamicsppapi.runasp.net`
+  /// - In Debug mode (local testing on Windows/Web): points to `http://localhost:5000/api`
+  /// - In Debug mode on Android emulator: points to `http://10.0.2.2:5000/api`
+  static String get baseUrl {
+    const customUrl = String.fromEnvironment('API_BASE_URL');
+    if (customUrl.isNotEmpty) {
+      return customUrl;
+    }
+
+    if (kReleaseMode) {
+      return _deployedBaseUrl;
+    }
+
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      return 'http://10.0.2.2:5000/api';
+    }
+
+    return _localBaseUrl;
+  }
 
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
