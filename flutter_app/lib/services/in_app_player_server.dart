@@ -58,7 +58,7 @@ class InAppPlayerServer {
       align-items: center;
       justify-content: center;
     }
-    iframe {
+    #player, iframe {
       width: 100%;
       height: 100%;
       border: 0;
@@ -66,13 +66,36 @@ class InAppPlayerServer {
   </style>
 </head>
 <body>
-  <iframe
-    src="https://www.youtube-nocookie.com/embed/$videoId?autoplay=1&controls=1&rel=0&playsinline=1&modestbranding=1$loopParam&origin=http://127.0.0.1:$_port"
-    title="Islamic Player"
-    referrerpolicy="strict-origin-when-cross-origin"
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-    allowfullscreen>
-  </iframe>
+  <div id="player"></div>
+  <script>
+    var tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    var firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+    var player;
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('player', {
+        height: '100%',
+        width: '100%',
+        videoId: '$videoId',
+        playerVars: {
+          'autoplay': 1,
+          'playsinline': 1,
+          'controls': ${isShort ? 0 : 1},
+          'rel': 0,
+          'modestbranding': 1,
+          ${isShort ? "'loop': 1, 'playlist': '$videoId'," : ""}
+          'origin': 'http://127.0.0.1:$_port'
+        },
+        events: {
+          'onReady': function(event) {
+            ${isShort ? "event.target.playVideo();" : ""}
+          }
+        }
+      });
+    }
+  </script>
 </body>
 </html>''';
 
@@ -107,3 +130,4 @@ class InAppPlayerServer {
     _port = 0;
   }
 }
+

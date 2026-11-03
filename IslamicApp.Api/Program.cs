@@ -87,7 +87,7 @@ app.MapGet("/api/player", (HttpContext httpContext, string? v, bool? isShort) =>
       align-items: center;
       justify-content: center;
     }}
-    iframe {{
+    #player, iframe {{
       width: 100%;
       height: 100%;
       border: 0;
@@ -95,14 +95,36 @@ app.MapGet("/api/player", (HttpContext httpContext, string? v, bool? isShort) =>
   </style>
 </head>
 <body>
-  <iframe
-    id=""ytplayer""
-    src=""https://www.youtube.com/embed/{videoId}?autoplay=1&controls=1&rel=0&playsinline=1&modestbranding=1{loopParam}&origin=http://localhost:5000""
-    title=""Hafiz Hasnain Video Player""
-    referrerpolicy=""strict-origin-when-cross-origin""
-    allow=""accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share""
-    allowfullscreen>
-  </iframe>
+  <div id=""player""></div>
+  <script>
+    var tag = document.createElement('script');
+    tag.src = ""https://www.youtube.com/iframe_api"";
+    var firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+    var player;
+    function onYouTubeIframeAPIReady() {{
+      player = new YT.Player('player', {{
+        height: '100%',
+        width: '100%',
+        videoId: '{videoId}',
+        playerVars: {{
+          'autoplay': 1,
+          'playsinline': 1,
+          'controls': {(isShortVideo ? 0 : 1)},
+          'rel': 0,
+          'modestbranding': 1,
+          {(isShortVideo ? $"'loop': 1, 'playlist': '{videoId}'," : "")}
+          'origin': 'http://localhost:5000'
+        }},
+        events: {{
+          'onReady': function(event) {{
+            {(isShortVideo ? "event.target.playVideo();" : "")}
+          }}
+        }}
+      }});
+    }}
+  </script>
 </body>
 </html>";
     return Results.Content(html, "text/html");
