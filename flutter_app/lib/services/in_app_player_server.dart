@@ -35,7 +35,6 @@ class InAppPlayerServer {
           final uri = request.uri;
           final videoId = uri.queryParameters['v'] ?? '';
           final isShort = uri.queryParameters['short'] == '1';
-          final loopParam = isShort ? '&loop=1&playlist=$videoId' : '';
 
           request.response.headers.set('Content-Type', 'text/html; charset=utf-8');
           request.response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');

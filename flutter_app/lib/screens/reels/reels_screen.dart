@@ -6,7 +6,8 @@ import '../../services/storage_service.dart';
 import '../../widgets/video_player/shorts_player_widget.dart';
 
 class ReelsScreen extends StatefulWidget {
-  const ReelsScreen({super.key});
+  final bool isActive;
+  const ReelsScreen({super.key, this.isActive = true});
 
   @override
   State<ReelsScreen> createState() => _ReelsScreenState();
@@ -113,6 +114,7 @@ class _ReelsScreenState extends State<ReelsScreen> {
                     index,
                     reels.length,
                     appState,
+                    isActive: widget.isActive && (_currentPageIndex == index),
                   );
                 },
               ),
@@ -177,8 +179,9 @@ class _ReelsScreenState extends State<ReelsScreen> {
     bool isSeen,
     int index,
     int totalCount,
-    AppStateService appState,
-  ) {
+    AppStateService appState, {
+    required bool isActive,
+  }) {
     return Stack(
       children: [
         // 1. Working Embedded In-App Video Player
@@ -186,6 +189,7 @@ class _ReelsScreenState extends State<ReelsScreen> {
           child: buildShortsPlayer(
             youtubeId: reel.youtubeId,
             title: reel.title,
+            isActive: isActive,
           ),
         ),
 

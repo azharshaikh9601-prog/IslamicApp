@@ -43,7 +43,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         onTabSelected: _onTabSelected,
         onOpenAskMasala: _openAskMasala,
       ),
-      const ReelsScreen(), // Tab 1: Short Clips (Shorts)
+      ReelsScreen(isActive: _currentIndex == 1), // Tab 1: Short Clips (Shorts)
       const VideosScreen(), // Tab 2: Islamic Lessons (Lessons)
       const CoursesScreen(), // Tab 3: Courses
       const QuotesScreen(), // Tab 4: Daily Quotes (Quotes)

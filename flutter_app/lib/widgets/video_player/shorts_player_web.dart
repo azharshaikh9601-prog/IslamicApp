@@ -10,11 +10,13 @@ Widget buildShortsPlayer({
   required String youtubeId,
   required String title,
   VoidCallback? onWatched,
+  bool isActive = true,
 }) {
   return WebShortsPlayer(
     youtubeId: youtubeId,
     title: title,
     onWatched: onWatched,
+    isActive: isActive,
   );
 }
 
@@ -22,12 +24,14 @@ class WebShortsPlayer extends StatefulWidget {
   final String youtubeId;
   final String title;
   final VoidCallback? onWatched;
+  final bool isActive;
 
   const WebShortsPlayer({
     super.key,
     required this.youtubeId,
     required this.title,
     this.onWatched,
+    this.isActive = true,
   });
 
   @override

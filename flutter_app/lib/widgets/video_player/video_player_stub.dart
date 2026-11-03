@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:webview_windows/webview_windows.dart';
 import '../../core/theme/app_colors.dart';
-import '../../services/api_service.dart';
 import '../../services/in_app_player_server.dart';
 
 Widget buildInAppVideoPlayer({

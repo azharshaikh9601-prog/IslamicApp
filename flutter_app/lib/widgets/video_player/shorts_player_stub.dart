@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:webview_windows/webview_windows.dart';
 import '../../core/theme/app_colors.dart';
-import '../../services/api_service.dart';
 import '../../services/in_app_player_server.dart';
 
 Widget buildShortsPlayer({
@@ -10,12 +9,14 @@ Widget buildShortsPlayer({
   required String youtubeId,
   required String title,
   VoidCallback? onWatched,
+  bool isActive = true,
 }) {
   return WindowsShortsPlayer(
     key: key,
     youtubeId: youtubeId,
     title: title,
     onWatched: onWatched,
+    isActive: isActive,
   );
 }
 
@@ -23,12 +24,14 @@ class WindowsShortsPlayer extends StatefulWidget {
   final String youtubeId;
   final String title;
   final VoidCallback? onWatched;
+  final bool isActive;
 
   const WindowsShortsPlayer({
     super.key,
     required this.youtubeId,
     required this.title,
     this.onWatched,
+    this.isActive = true,
   });
 
   @override
@@ -43,19 +46,36 @@ class _WindowsShortsPlayerState extends State<WindowsShortsPlayer> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        widget.onWatched?.call();
-      }
-    });
+    if (widget.isActive) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          widget.onWatched?.call();
+        }
+      });
+    }
     _initWebView();
   }
 
   @override
   void didUpdateWidget(covariant WindowsShortsPlayer oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.youtubeId != widget.youtubeId && _isInitialized) {
-      _loadCurrentShort();
+    if (oldWidget.isActive != widget.isActive) {
+      if (widget.isActive) {
+        if (_isInitialized) {
+          _loadCurrentShort();
+          widget.onWatched?.call();
+        }
+      } else {
+        if (_isInitialized) {
+          try {
+            _controller.loadUrl('about:blank');
+          } catch (_) {}
+        }
+      }
+    } else if (widget.isActive && oldWidget.youtubeId != widget.youtubeId) {
+      if (_isInitialized) {
+        _loadCurrentShort();
+      }
     }
   }
 
@@ -77,7 +97,9 @@ class _WindowsShortsPlayerState extends State<WindowsShortsPlayer> {
       await _controller.initialize();
       await _controller.setBackgroundColor(Colors.black);
 
-      await _loadCurrentShort();
+      if (widget.isActive) {
+        await _loadCurrentShort();
+      }
 
       if (!mounted) return;
       setState(() {
@@ -146,6 +168,9 @@ class _WindowsShortsPlayerState extends State<WindowsShortsPlayer> {
 
   @override
   void dispose() {
+    try {
+      _controller.loadUrl('about:blank');
+    } catch (_) {}
     _controller.dispose();
     super.dispose();
   }
@@ -175,6 +200,24 @@ class _WindowsShortsPlayerState extends State<WindowsShortsPlayer> {
               ),
             ],
           ),
+        ),
+      );
+    }
+
+    if (!widget.isActive) {
+      return Container(
+        color: Colors.black,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.network(
+              'https://img.youtube.com/vi/${widget.youtubeId}/hqdefault.jpg',
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const Center(
+                child: Icon(Icons.bolt, color: AppColors.primaryGold, size: 60),
+              ),
+            ),
+          ],
         ),
       );
     }

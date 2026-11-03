@@ -42,14 +42,57 @@ public class SqlDatabaseService
                         "INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion]) VALUES ('20261031132609_InitialCreate', '10.0.14');");
                     _isSqlServerConnected = true;
                     _logger.LogInformation("SQL Server existing schema recognized and initial migration recorded.");
-                    await SeedDatabaseIfEmptyAsync(context);
-                    return;
                 }
                 catch { }
             }
 
-            _isSqlServerConnected = false;
-            _logger.LogError(ex, "SQL Server migration failed: {Message}", ex.Message);
+            // Ensure any missing tables are explicitly created if migration was skipped
+            try
+            {
+                await context.Database.ExecuteSqlRawAsync(@"
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ScholarProfiles')
+BEGIN
+    CREATE TABLE [ScholarProfiles] (
+        [Name] nvarchar(150) NOT NULL,
+        [Title] nvarchar(200) NOT NULL,
+        [Handle] nvarchar(100) NOT NULL,
+        [YoutubeUrl] nvarchar(max) NOT NULL,
+        [Domain] nvarchar(150) NOT NULL,
+        [Subscribers] nvarchar(max) NOT NULL,
+        [TotalViews] nvarchar(max) NOT NULL,
+        [VideosCount] nvarchar(max) NOT NULL,
+        [Bio] nvarchar(max) NOT NULL,
+        [Location] nvarchar(max) NOT NULL,
+        [Whatsapp] nvarchar(max) NOT NULL,
+        [Email] nvarchar(max) NOT NULL,
+        CONSTRAINT [PK_ScholarProfiles] PRIMARY KEY ([Name])
+    );
+END;
+
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'UserStates')
+BEGIN
+    CREATE TABLE [UserStates] (
+        [Id] nvarchar(50) NOT NULL,
+        [WatchedVideoIds] nvarchar(max) NOT NULL,
+        [BookmarkedVideoIds] nvarchar(max) NOT NULL,
+        [LikedShortIds] nvarchar(max) NOT NULL,
+        [SeenShortIds] nvarchar(max) NOT NULL,
+        [TasbeehCount] int NOT NULL,
+        [TasbeehTotal] int NOT NULL,
+        [CurrentDhikrId] nvarchar(100) NOT NULL,
+        [SelectedLocationId] nvarchar(100) NOT NULL,
+        [AsrFactor] int NOT NULL,
+        CONSTRAINT [PK_UserStates] PRIMARY KEY ([Id])
+    );
+END;");
+                _isSqlServerConnected = true;
+            }
+            catch (Exception ddlEx)
+            {
+                _logger.LogWarning(ddlEx, "DDL check for missing tables encountered an issue: {Message}", ddlEx.Message);
+            }
+
+            await SeedDatabaseIfEmptyAsync(context);
         }
     }
 
@@ -57,31 +100,79 @@ public class SqlDatabaseService
     {
         try
         {
-            if (!await context.ScholarProfiles.AnyAsync())
+            var seed = SeedDataGenerator.GetInitialSeedData();
+
+            // Ensure ScholarProfile is present
+            try
             {
-                var seed = SeedDataGenerator.GetInitialSeedData();
-                await context.ScholarProfiles.AddAsync(seed.Profile);
-                await context.Videos.AddRangeAsync(seed.Videos);
-                await context.Reels.AddRangeAsync(seed.Reels);
-                await context.Playlists.AddRangeAsync(seed.Playlists);
-                await context.Courses.AddRangeAsync(seed.Courses);
-                await context.Quotes.AddRangeAsync(seed.Quotes);
-                await context.DhikrList.AddRangeAsync(seed.DhikrList);
-                await context.PrayerLocations.AddRangeAsync(seed.PrayerLocations);
-
-                var defaultUserState = new UserInteractionStateEntity
+                if (!await context.ScholarProfiles.AnyAsync())
                 {
-                    Id = "default_user",
-                    CurrentDhikrId = "subhanallah",
-                    SelectedLocationId = "in_mh_ratnagiri",
-                    TasbeehCount = 0,
-                    TasbeehTotal = 1420,
-                    AsrFactor = 2
-                };
-                await context.UserStates.AddAsync(defaultUserState);
+                    await context.ScholarProfiles.AddAsync(seed.Profile);
+                    await context.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Profile seed check: {Message}", ex.Message);
+            }
 
-                await context.SaveChangesAsync();
-                _logger.LogInformation("Database seeded with initial scholar profile, videos, reels, courses, playlists, quotes, and locations.");
+            // Sync all 173 videos
+            try
+            {
+                var existingVideoIds = (await context.Videos.Select(v => v.Id).ToListAsync()).ToHashSet();
+                var missingVideos = seed.Videos.Where(v => !existingVideoIds.Contains(v.Id)).ToList();
+                if (missingVideos.Count > 0)
+                {
+                    await context.Videos.AddRangeAsync(missingVideos);
+                    await context.SaveChangesAsync();
+                    _logger.LogInformation("Synchronized {Count} missing videos. Total videos now in DB: {Total}",
+                        missingVideos.Count, existingVideoIds.Count + missingVideos.Count);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Video sync: {Message}", ex.Message);
+            }
+
+            // Sync all 48 shorts/reels
+            try
+            {
+                var existingReelIds = (await context.Reels.Select(r => r.Id).ToListAsync()).ToHashSet();
+                var missingReels = seed.Reels.Where(r => !existingReelIds.Contains(r.Id)).ToList();
+                if (missingReels.Count > 0)
+                {
+                    await context.Reels.AddRangeAsync(missingReels);
+                    await context.SaveChangesAsync();
+                    _logger.LogInformation("Synchronized {Count} missing reels. Total reels now in DB: {Total}",
+                        missingReels.Count, existingReelIds.Count + missingReels.Count);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Reels sync: {Message}", ex.Message);
+            }
+
+            // User default state
+            try
+            {
+                if (!await context.UserStates.AnyAsync())
+                {
+                    var defaultUserState = new UserInteractionStateEntity
+                    {
+                        Id = "default_user",
+                        CurrentDhikrId = "subhanallah",
+                        SelectedLocationId = "in_mh_ratnagiri",
+                        TasbeehCount = 0,
+                        TasbeehTotal = 1420,
+                        AsrFactor = 2
+                    };
+                    await context.UserStates.AddAsync(defaultUserState);
+                    await context.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "UserStates sync: {Message}", ex.Message);
             }
         }
         catch (Exception ex)

@@ -5,7 +5,6 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/initial_data.dart';
 import '../../data/prayer_locations.dart';
-import '../../models/dhikr_model.dart';
 import '../../services/storage_service.dart';
 import '../../services/prayer_calculator_service.dart';
 
