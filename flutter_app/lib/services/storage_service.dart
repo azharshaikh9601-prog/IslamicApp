@@ -189,6 +189,20 @@ class AppStateService extends ChangeNotifier {
     await _api.createPlaylist(playlist);
   }
 
+  Future<void> updatePlaylist(PlaylistModel playlist) async {
+    final idx = _playlists.indexWhere((p) => p.id == playlist.id);
+    if (idx >= 0) {
+      _playlists[idx] = playlist;
+      notifyListeners();
+      await _api.updatePlaylist(playlist);
+    }
+  }
+
+  Future<void> deletePlaylist(String playlistId) async {
+    _playlists.removeWhere((p) => p.id == playlistId);
+    notifyListeners();
+  }
+
   // Courses (Initialized with InitialData fallback)
   List<CourseModel> _courses = List.from(InitialData.courses);
   List<CourseModel> get courses => _courses;

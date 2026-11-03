@@ -47,6 +47,7 @@ class _VideosScreenState extends State<VideosScreen> {
     final descCtrl = TextEditingController();
     final thumbCtrl = TextEditingController();
     String topicKey = 'Namaz Ka Tarika';
+    List<VideoModel> selectedVideos = [];
 
     showDialog(
       context: context,
@@ -70,6 +71,7 @@ class _VideosScreenState extends State<VideosScreen> {
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TextField(
                   controller: titleCtrl,
@@ -102,10 +104,10 @@ class _VideosScreenState extends State<VideosScreen> {
                   controller: thumbCtrl,
                   style: const TextStyle(color: Colors.white, fontSize: 13),
                   decoration: const InputDecoration(
-                    labelText: 'Thumbnail Image URL (or YouTube Video ID)',
+                    labelText: 'Thumbnail Image URL (optional, auto-picks from 1st video)',
                     labelStyle: TextStyle(color: AppColors.lightGold),
-                    hintText: 'e.g. gMTvoRUgeXA',
-                    hintStyle: TextStyle(color: Colors.white38),
+                    hintText: 'Leave empty to auto-use first video thumbnail',
+                    hintStyle: TextStyle(color: Colors.white38, fontSize: 11),
                     enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.borderEmerald)),
                   ),
                 ),
@@ -133,6 +135,67 @@ class _VideosScreenState extends State<VideosScreen> {
                     if (val != null) setDialogState(() => topicKey = val);
                   },
                 ),
+                const SizedBox(height: 14),
+                // Video Selection Card
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF082218),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.borderEmerald),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.video_library, color: AppColors.primaryGold, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Playlist Videos:',
+                              style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              selectedVideos.isEmpty
+                                  ? 'No videos selected'
+                                  : '${selectedVideos.length} videos selected from uploaded library',
+                              style: const TextStyle(color: AppColors.lightGold, fontSize: 10.5),
+                            ),
+                          ],
+                        ),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          _showVideoSelectionDialog(
+                            context,
+                            appState.videos,
+                            selectedVideos,
+                            (chosen) {
+                              setDialogState(() {
+                                selectedVideos = chosen;
+                                if (thumbCtrl.text.trim().isEmpty && chosen.isNotEmpty) {
+                                  thumbCtrl.text = chosen.first.thumbnailUrl;
+                                }
+                              });
+                            },
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryGold,
+                          foregroundColor: AppColors.darkEmerald,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          selectedVideos.isEmpty ? 'Select Videos' : 'Change (${selectedVideos.length})',
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -145,7 +208,9 @@ class _VideosScreenState extends State<VideosScreen> {
               onPressed: () {
                 if (titleCtrl.text.trim().isEmpty) return;
                 final thumb = thumbCtrl.text.trim().isEmpty
-                    ? 'https://img.youtube.com/vi/gMTvoRUgeXA/hqdefault.jpg'
+                    ? (selectedVideos.isNotEmpty
+                        ? selectedVideos.first.thumbnailUrl
+                        : 'https://img.youtube.com/vi/gMTvoRUgeXA/hqdefault.jpg')
                     : (thumbCtrl.text.trim().startsWith('http')
                         ? thumbCtrl.text.trim()
                         : 'https://img.youtube.com/vi/${thumbCtrl.text.trim()}/hqdefault.jpg');
@@ -160,7 +225,7 @@ class _VideosScreenState extends State<VideosScreen> {
                   description: descCtrl.text.trim().isEmpty
                       ? 'Authentic Islamic lessons by Hafiz Hasnain Jaani.'
                       : descCtrl.text.trim(),
-                  videos: [],
+                  videos: selectedVideos,
                 );
                 appState.addPlaylist(newPl);
                 Navigator.pop(ctx);
@@ -179,6 +244,314 @@ class _VideosScreenState extends State<VideosScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // Interactive Video Picker for Playlists
+  void _showVideoSelectionDialog(
+    BuildContext context,
+    List<VideoModel> allVideos,
+    List<VideoModel> initiallySelected,
+    ValueChanged<List<VideoModel>> onConfirmed,
+  ) {
+    final selected = List<VideoModel>.from(initiallySelected);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFF041E16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+              side: const BorderSide(color: AppColors.primaryGold, width: 1.5),
+            ),
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Select Uploaded Videos',
+                  style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryGold,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    '${selected.length} Selected',
+                    style: const TextStyle(color: Color(0xFF032B1F), fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: 460,
+              height: 420,
+              child: allVideos.isEmpty
+                  ? const Center(
+                      child: Text('No uploaded videos available.', style: TextStyle(color: Colors.white70)),
+                    )
+                  : ListView.separated(
+                      itemCount: allVideos.length,
+                      separatorBuilder: (_, __) => const Divider(color: AppColors.borderEmerald, height: 1),
+                      itemBuilder: (ctx, idx) {
+                        final v = allVideos[idx];
+                        final isChecked = selected.any((s) => s.id == v.id);
+
+                        return CheckboxListTile(
+                          activeColor: AppColors.primaryGold,
+                          checkColor: AppColors.darkEmerald,
+                          tileColor: isChecked ? AppColors.surfaceEmerald.withOpacity(0.3) : null,
+                          dense: true,
+                          value: isChecked,
+                          onChanged: (val) {
+                            setDialogState(() {
+                              if (val == true) {
+                                selected.add(v);
+                              } else {
+                                selected.removeWhere((s) => s.id == v.id);
+                              }
+                            });
+                          },
+                          secondary: ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: SizedBox(
+                              width: 50,
+                              height: 35,
+                              child: Image.network(
+                                v.thumbnailUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(color: Colors.white12),
+                              ),
+                            ),
+                          ),
+                          title: Text(
+                            v.title,
+                            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text(
+                            '${v.duration} • ${v.category}',
+                            style: const TextStyle(color: AppColors.darkTextMuted, fontSize: 10),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  onConfirmed(selected);
+                  Navigator.pop(ctx);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryGold,
+                  foregroundColor: AppColors.darkEmerald,
+                ),
+                child: Text('Done (${selected.length} Videos)', style: const TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  // Edit Playlist Dialog: add/remove videos and modify details
+  void _showEditPlaylistDialog(BuildContext context, PlaylistModel playlist, AppStateService appState) {
+    final titleCtrl = TextEditingController(text: playlist.title);
+    final urduCtrl = TextEditingController(text: playlist.urduTitle);
+    final descCtrl = TextEditingController(text: playlist.description);
+    String category = playlist.category;
+    List<VideoModel> currentVideos = List<VideoModel>.from(playlist.videos);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFF041E16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+              side: const BorderSide(color: AppColors.primaryGold, width: 1.5),
+            ),
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: const [
+                    Icon(Icons.edit_note, color: AppColors.primaryGold),
+                    SizedBox(width: 8),
+                    Text('Edit Playlist', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_forever, color: Colors.redAccent, size: 20),
+                  tooltip: 'Delete Playlist',
+                  onPressed: () {
+                    appState.deletePlaylist(playlist.id);
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Playlist deleted.'), backgroundColor: Colors.redAccent),
+                    );
+                  },
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: 500,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: titleCtrl,
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                      decoration: const InputDecoration(
+                        labelText: 'Playlist Title',
+                        labelStyle: TextStyle(color: AppColors.lightGold),
+                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.borderEmerald)),
+                      ),
+                    ),
+                    TextField(
+                      controller: urduCtrl,
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                      decoration: const InputDecoration(
+                        labelText: 'Urdu Title (اردو عنوان)',
+                        labelStyle: TextStyle(color: AppColors.lightGold),
+                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.borderEmerald)),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Videos in Playlist (${currentVideos.length}):',
+                          style: const TextStyle(color: AppColors.lightGold, fontSize: 12.5, fontWeight: FontWeight.bold),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            _showVideoSelectionDialog(
+                              context,
+                              appState.videos,
+                              currentVideos,
+                              (selected) {
+                                setDialogState(() {
+                                  currentVideos = selected;
+                                });
+                              },
+                            );
+                          },
+                          icon: const Icon(Icons.add_photo_alternate, size: 14, color: AppColors.primaryGold),
+                          label: const Text('Add / Change Videos', style: TextStyle(color: AppColors.primaryGold, fontSize: 11)),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: AppColors.primaryGold),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      constraints: const BoxConstraints(maxHeight: 220),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF082218),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.borderEmerald),
+                      ),
+                      child: currentVideos.isEmpty
+                          ? const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(16.0),
+                                child: Text('No videos in this playlist. Click "Add / Change Videos" above.',
+                                    style: TextStyle(color: AppColors.darkTextMuted, fontSize: 12), textAlign: TextAlign.center),
+                              ),
+                            )
+                          : ListView.separated(
+                              shrinkWrap: true,
+                              itemCount: currentVideos.length,
+                              separatorBuilder: (_, __) => const Divider(color: AppColors.borderEmerald, height: 1),
+                              itemBuilder: (ctx, idx) {
+                                final v = currentVideos[idx];
+                                return ListTile(
+                                  dense: true,
+                                  leading: ClipRRect(
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: SizedBox(
+                                      width: 44,
+                                      height: 30,
+                                      child: Image.network(v.thumbnailUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: Colors.white10)),
+                                    ),
+                                  ),
+                                  title: Text(
+                                    '${idx + 1}. ${v.title}',
+                                    style: const TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.w600),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  trailing: IconButton(
+                                    icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 18),
+                                    tooltip: 'Remove from Playlist',
+                                    onPressed: () {
+                                      setDialogState(() {
+                                        currentVideos.removeAt(idx);
+                                      });
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  if (titleCtrl.text.trim().isEmpty) return;
+                  final updatedPl = PlaylistModel(
+                    id: playlist.id,
+                    title: titleCtrl.text.trim(),
+                    urduTitle: urduCtrl.text.trim().isEmpty ? titleCtrl.text.trim() : urduCtrl.text.trim(),
+                    category: category,
+                    topicKey: playlist.topicKey,
+                    thumbnail: currentVideos.isNotEmpty ? currentVideos.first.thumbnailUrl : playlist.thumbnail,
+                    description: descCtrl.text.trim().isEmpty ? playlist.description : descCtrl.text.trim(),
+                    videos: currentVideos,
+                  );
+                  appState.updatePlaylist(updatedPl);
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('✓ Playlist updated successfully!'),
+                      backgroundColor: AppColors.darkEmerald,
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryGold,
+                  foregroundColor: AppColors.darkEmerald,
+                ),
+                child: const Text('Save Playlist', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -813,7 +1186,7 @@ class _VideosScreenState extends State<VideosScreen> {
           crossAxisCount: 2,
           crossAxisSpacing: 10,
           mainAxisSpacing: 12,
-          childAspectRatio: 0.74,
+          childAspectRatio: 0.86,
         ),
         delegate: SliverChildBuilderDelegate(
           (context, index) {
@@ -887,71 +1260,115 @@ class _VideosScreenState extends State<VideosScreen> {
                       ),
                     ),
                   ),
+                  // Admin Quick Edit Playlist Button
+                  if (appState.isAdmin)
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: InkWell(
+                        onTap: () => _showEditPlaylistDialog(context, playlist, appState),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.85),
+                            borderRadius: BorderRadius.circular(5),
+                            border: Border.all(color: AppColors.primaryGold, width: 1),
+                          ),
+                          child: const Icon(Icons.edit, color: AppColors.primaryGold, size: 12),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
 
-            // Card Body (Title & Play Entire Playlist button)
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    GestureDetector(
-                      onTap: () => appState.selectPlaylist(playlist.id),
-                      child: Text(
-                        playlist.title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w700,
-                          height: 1.25,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+            // Card Body (Title, Category / Edit link, Play button)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 7, 8, 7),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: () => appState.selectPlaylist(playlist.id),
+                    child: Text(
+                      playlist.title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        height: 1.2,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    // ▶ Play Entire Playlist Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          if (playlist.videos.isNotEmpty) {
-                            _playVideoInApp(
-                              context,
-                              playlist.videos.first,
-                              playlist: playlist,
-                              playlistIndex: 0,
-                            );
-                          } else {
-                            appState.selectPlaylist(playlist.id);
-                          }
-                        },
-                        icon: const Icon(Icons.play_arrow_rounded, color: AppColors.darkEmerald, size: 14),
-                        label: const Text(
-                          'Play Entire Playlist',
-                          style: TextStyle(
-                            color: AppColors.darkEmerald,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 10.5,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryGold,
-                          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          elevation: 0,
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          playlist.category,
+                          style: const TextStyle(color: AppColors.lightGold, fontSize: 9.5),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      if (appState.isAdmin)
+                        InkWell(
+                          onTap: () => _showEditPlaylistDialog(context, playlist, appState),
+                          child: const Text(
+                            'Edit',
+                            style: TextStyle(
+                              color: AppColors.brightGold,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 5),
+                  // ▶ Play Entire Playlist Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        if (playlist.videos.isNotEmpty) {
+                          _playVideoInApp(
+                            context,
+                            playlist.videos.first,
+                            playlist: playlist,
+                            playlistIndex: 0,
+                          );
+                        } else {
+                          appState.selectPlaylist(playlist.id);
+                        }
+                      },
+                      icon: const Icon(Icons.play_arrow_rounded, color: AppColors.darkEmerald, size: 14),
+                      label: const Text(
+                        'Play Entire Playlist',
+                        style: TextStyle(
+                          color: AppColors.darkEmerald,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10.5,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryGold,
+                        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        elevation: 0,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -984,7 +1401,7 @@ class _VideosScreenState extends State<VideosScreen> {
           crossAxisCount: 2,
           crossAxisSpacing: 10,
           mainAxisSpacing: 12,
-          childAspectRatio: 0.74,
+          childAspectRatio: 0.90,
         ),
         delegate: SliverChildBuilderDelegate(
           (context, index) {
@@ -1004,6 +1421,7 @@ class _VideosScreenState extends State<VideosScreen> {
                 borderRadius: BorderRadius.circular(14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     // Video Thumbnail with Duration & Watched badge
                     GestureDetector(
@@ -1063,72 +1481,72 @@ class _VideosScreenState extends State<VideosScreen> {
                       ),
                     ),
 
-                    // Video Body (Title, Views, Watch button)
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            GestureDetector(
-                              onTap: () => _playVideoInApp(context, video),
-                              child: Text(
-                                video.title,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  height: 1.25,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
+                    // Video Body (Title, Views, Watch button with no empty space)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 6, 8, 7),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          GestureDetector(
+                            onTap: () => _playVideoInApp(context, video),
+                            child: Text(
+                              video.title,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                height: 1.2,
                               ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  video.views,
-                                  style: const TextStyle(color: AppColors.lightGold, fontSize: 9.5),
-                                ),
-                                GestureDetector(
-                                  onTap: () => appState.toggleVideoWatched(video.id),
-                                  child: Icon(
-                                    isWatched ? Icons.check_circle : Icons.check_circle_outline,
-                                    color: isWatched ? Colors.redAccent : Colors.white38,
-                                    size: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                onPressed: () => _playVideoInApp(context, video),
-                                icon: const Icon(Icons.play_arrow_rounded, color: AppColors.darkEmerald, size: 14),
-                                label: const Text(
-                                  'Watch Lesson',
-                                  style: TextStyle(
-                                    color: AppColors.darkEmerald,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 10.5,
-                                  ),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primaryGold,
-                                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  elevation: 0,
-                                  minimumSize: Size.zero,
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                video.views,
+                                style: const TextStyle(color: AppColors.lightGold, fontSize: 9.5),
+                              ),
+                              GestureDetector(
+                                onTap: () => appState.toggleVideoWatched(video.id),
+                                child: Icon(
+                                  isWatched ? Icons.check_circle : Icons.check_circle_outline,
+                                  color: isWatched ? Colors.redAccent : Colors.white38,
+                                  size: 14,
                                 ),
                               ),
+                            ],
+                          ),
+                          const SizedBox(height: 5),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () => _playVideoInApp(context, video),
+                              icon: const Icon(Icons.play_arrow_rounded, color: AppColors.darkEmerald, size: 14),
+                              label: const Text(
+                                'Watch Lesson',
+                                style: TextStyle(
+                                  color: AppColors.darkEmerald,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 10.5,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryGold,
+                                padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 4),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                elevation: 0,
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ],

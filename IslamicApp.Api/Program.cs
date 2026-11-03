@@ -29,6 +29,7 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 app.UseCors();
+app.UseStaticFiles();
 
 // Run SQL Server database schema initialization & migration on startup
 using (var scope = app.Services.CreateScope())
@@ -65,10 +66,52 @@ app.MapGet("/api/player", (HttpContext httpContext, string? v, bool? isShort) =>
 {
     var videoId = v ?? "";
     var isShortVideo = isShort == true;
-    var loopParam = isShortVideo ? $"&loop=1&playlist={videoId}&controls=0" : "&controls=1";
+    var isDirectVideo = videoId.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                        videoId.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+                        videoId.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase) ||
+                        videoId.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) ||
+                        videoId.EndsWith(".webm", StringComparison.OrdinalIgnoreCase) ||
+                        videoId.EndsWith(".mov", StringComparison.OrdinalIgnoreCase);
 
     httpContext.Response.Headers.Append("Referrer-Policy", "unsafe-url");
     httpContext.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+
+    if (isDirectVideo)
+    {
+        var fullUrl = videoId.StartsWith("/uploads/") ? $"http://localhost:5000{videoId}" : videoId;
+        var directHtml = $@"<!DOCTYPE html>
+<html>
+<head>
+  <meta charset=""utf-8"">
+  <meta name=""viewport"" content=""width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"">
+  <style>
+    * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+    html, body {{
+      width: 100%;
+      height: 100%;
+      background-color: #000000;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }}
+    video {{
+      width: 100%;
+      height: 100%;
+      max-height: 100vh;
+      object-fit: contain;
+      outline: none;
+    }}
+  </style>
+</head>
+<body>
+  <video src=""{fullUrl}"" controls autoplay controlsList=""nodownload"" oncontextmenu=""return false;""></video>
+</body>
+</html>";
+        return Results.Content(directHtml, "text/html");
+    }
+
+    var loopParam = isShortVideo ? $"&loop=1&playlist={videoId}&controls=0" : "&controls=1";
 
     var html = $@"<!DOCTYPE html>
 <html>
@@ -104,6 +147,46 @@ app.MapGet("/api/player", (HttpContext httpContext, string? v, bool? isShort) =>
 </body>
 </html>";
     return Results.Content(html, "text/html");
+});
+
+// Upload In-App Course Video (Private, self-hosted, NOT on YouTube)
+app.MapPost("/api/courses/upload-video", async (HttpRequest request) =>
+{
+    if (!request.HasFormContentType || request.Form.Files.Count == 0)
+    {
+        return Results.BadRequest(new { success = false, message = "No video file provided." });
+    }
+
+    var file = request.Form.Files[0];
+    if (file.Length == 0)
+    {
+        return Results.BadRequest(new { success = false, message = "Empty video file." });
+    }
+
+    var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "course_videos");
+    if (!Directory.Exists(uploadsFolder))
+    {
+        Directory.CreateDirectory(uploadsFolder);
+    }
+
+    var ext = Path.GetExtension(file.FileName);
+    if (string.IsNullOrEmpty(ext)) ext = ".mp4";
+    var safeName = $"{Guid.NewGuid():N}{ext}";
+    var filePath = Path.Combine(uploadsFolder, safeName);
+
+    using (var stream = new FileStream(filePath, FileMode.Create))
+    {
+        await file.CopyToAsync(stream);
+    }
+
+    var relativeUrl = $"/uploads/course_videos/{safeName}";
+    return Results.Ok(new 
+    { 
+        success = true, 
+        videoUrl = relativeUrl, 
+        fileName = file.FileName,
+        message = "In-App Private Course Video uploaded successfully!" 
+    });
 });
 
 // ---------------------------------------------------------------------------

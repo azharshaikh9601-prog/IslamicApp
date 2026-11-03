@@ -179,14 +179,19 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                         ),
                       ),
                       const SizedBox(width: 6),
-                      Text(
-                        AppStateService().isLoggedIn
-                            ? AppStateService().currentUser!.username
-                            : 'Sign In',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                      ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: isMobile ? 85 : 140),
+                        child: Text(
+                          AppStateService().isLoggedIn
+                              ? AppStateService().currentUser!.username
+                              : 'Sign In',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       const SizedBox(width: 2),

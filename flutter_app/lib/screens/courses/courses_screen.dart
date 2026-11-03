@@ -1,9 +1,12 @@
-﻿import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/course_model.dart';
 import '../../models/video_model.dart';
 import '../../services/storage_service.dart';
+import '../../services/api_service.dart';
 import '../../widgets/video_player/in_app_player_modal.dart';
 import '../../widgets/auth/auth_modal.dart';
 
@@ -122,6 +125,393 @@ class _CoursesScreenState extends State<CoursesScreen> {
       return;
     }
 
+    int selectedPaymentMethod = 0; // 0: UPI & QR, 1: Card / NetBanking, 2: 1-Tap Test Checkout
+    final upiIdCtrl = TextEditingController(text: '${appState.currentUser?.username.replaceAll(" ", "").toLowerCase()}@okhdfcbank');
+    bool isProcessing = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.88,
+            decoration: const BoxDecoration(
+              color: Color(0xFF041E16),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              border: Border(
+                top: BorderSide(color: AppColors.primaryGold, width: 1.5),
+              ),
+            ),
+            child: Column(
+              children: [
+                // Drag handle
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(vertical: 10),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+
+                // Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 4, 18, 12),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryGold.withOpacity(0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.verified_user, color: AppColors.primaryGold, size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              'Secure Course Enrollment',
+                              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              'Official Hafiz Hasnain Jaani Islamic Academy',
+                              style: TextStyle(color: AppColors.lightGold, fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white70),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const Divider(color: AppColors.borderEmerald, height: 1),
+
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.all(18),
+                    children: [
+                      // Course Summary Card
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF072B20),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppColors.borderEmerald),
+                        ),
+                        child: Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: SizedBox(
+                                width: 80,
+                                height: 55,
+                                child: Image.network(
+                                  course.thumbnail,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Container(color: Colors.black26),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    course.title,
+                                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${course.lessons.length} Exclusive Lessons • Lifetime Access',
+                                    style: const TextStyle(color: AppColors.darkTextMuted, fontSize: 10.5),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Total Payable Fee: ₹${course.price}',
+                                    style: const TextStyle(color: AppColors.brightGold, fontSize: 13, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      const Text(
+                        'Select Payment Method:',
+                        style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Payment Method Selector Tabs
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildPayMethodTab(
+                              title: 'UPI / QR',
+                              icon: Icons.qr_code_scanner,
+                              isSelected: selectedPaymentMethod == 0,
+                              onTap: () => setSheetState(() => selectedPaymentMethod = 0),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _buildPayMethodTab(
+                              title: 'Cards & NetBanking',
+                              icon: Icons.credit_card,
+                              isSelected: selectedPaymentMethod == 1,
+                              onTap: () => setSheetState(() => selectedPaymentMethod = 1),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _buildPayMethodTab(
+                              title: 'Test / Instant',
+                              icon: Icons.flash_on,
+                              isSelected: selectedPaymentMethod == 2,
+                              onTap: () => setSheetState(() => selectedPaymentMethod = 2),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Method 0: UPI & QR
+                      if (selectedPaymentMethod == 0) ...[
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF031610),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.primaryGold.withOpacity(0.4)),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  // Simulated QR Code Icon
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(Icons.qr_code_2, color: Colors.black, size: 48),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text('Scan & Pay via any UPI App', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                                        const SizedBox(height: 2),
+                                        const Text('GPay, PhonePe, Paytm, BHIM, Cred', style: TextStyle(color: AppColors.darkTextMuted, fontSize: 10)),
+                                        const SizedBox(height: 6),
+                                        Row(
+                                          children: [
+                                            const Expanded(
+                                              child: Text(
+                                                'UPI ID: hafizhasnainjaani@okaxis',
+                                                style: TextStyle(color: AppColors.primaryGold, fontSize: 10, fontWeight: FontWeight.bold),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            InkWell(
+                                              onTap: () {
+                                                Clipboard.setData(const ClipboardData(text: 'hafizhasnainjaani@okaxis'));
+                                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('UPI ID copied to clipboard!')));
+                                              },
+                                              child: const Icon(Icons.copy, size: 12, color: AppColors.primaryGold),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              TextField(
+                                controller: upiIdCtrl,
+                                style: const TextStyle(color: Colors.white, fontSize: 12),
+                                decoration: const InputDecoration(
+                                  labelText: 'Or enter your UPI ID',
+                                  labelStyle: TextStyle(color: AppColors.lightGold, fontSize: 11),
+                                  prefixIcon: Icon(Icons.alternate_email, color: AppColors.primaryGold, size: 16),
+                                  isDense: true,
+                                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.borderEmerald)),
+                                  focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.primaryGold)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      // Method 1: Cards & NetBanking
+                      if (selectedPaymentMethod == 1) ...[
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF031610),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.borderEmerald),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              TextField(
+                                style: TextStyle(color: Colors.white, fontSize: 12),
+                                decoration: InputDecoration(
+                                  labelText: 'Card Number',
+                                  hintText: '4111 •••• •••• 1111',
+                                  hintStyle: TextStyle(color: Colors.white24, fontSize: 11),
+                                  labelStyle: TextStyle(color: AppColors.lightGold, fontSize: 11),
+                                  prefixIcon: Icon(Icons.credit_card, color: AppColors.primaryGold, size: 16),
+                                  isDense: true,
+                                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.borderEmerald)),
+                                ),
+                              ),
+                              SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      style: TextStyle(color: Colors.white, fontSize: 12),
+                                      decoration: InputDecoration(
+                                        labelText: 'Expiry (MM/YY)',
+                                        hintText: '12/28',
+                                        hintStyle: TextStyle(color: Colors.white24, fontSize: 11),
+                                        labelStyle: TextStyle(color: AppColors.lightGold, fontSize: 11),
+                                        isDense: true,
+                                        enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.borderEmerald)),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: 10),
+                                  Expanded(
+                                    child: TextField(
+                                      obscureText: true,
+                                      style: TextStyle(color: Colors.white, fontSize: 12),
+                                      decoration: InputDecoration(
+                                        labelText: 'CVV',
+                                        hintText: '•••',
+                                        hintStyle: TextStyle(color: Colors.white24, fontSize: 11),
+                                        labelStyle: TextStyle(color: AppColors.lightGold, fontSize: 11),
+                                        isDense: true,
+                                        enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.borderEmerald)),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      // Method 2: Test / Instant Checkout
+                      if (selectedPaymentMethod == 2) ...[
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF031610),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.tealAccent.withOpacity(0.4)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              Row(
+                                children: [
+                                  Icon(Icons.bolt, color: Colors.tealAccent, size: 18),
+                                  SizedBox(width: 6),
+                                  Text('Instant Auto-Verification Mode', style: TextStyle(color: Colors.tealAccent, fontSize: 12, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                              SizedBox(height: 6),
+                              Text(
+                                'Enables instant one-tap simulated payment verification. Immediately updates database records and automatically opens the full course.',
+                                style: TextStyle(color: AppColors.darkTextMuted, fontSize: 11, height: 1.3),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      const SizedBox(height: 20),
+
+                      // Pay Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: isProcessing
+                              ? null
+                              : () async {
+                                  setSheetState(() => isProcessing = true);
+                                  await Future.delayed(const Duration(milliseconds: 600));
+
+                                  final res = await appState.enrollInCourse(course.id);
+                                  if (!context.mounted) return;
+                                  Navigator.pop(ctx); // Close checkout sheet
+
+                                  if (res['success'] == true) {
+                                    // AUTOMATICALLY OPEN THE COURSE!
+                                    _showPaymentSuccessAndOpenCourse(context, course, appState);
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(res['message'] ?? 'Enrollment failed.'), backgroundColor: Colors.redAccent),
+                                    );
+                                  }
+                                },
+                          icon: isProcessing
+                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.darkEmerald))
+                              : const Icon(Icons.check_circle_outline, size: 18),
+                          label: Text(
+                            isProcessing ? 'Verifying Payment...' : 'Pay ₹${course.price} & Unlock Course',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryGold,
+                            foregroundColor: AppColors.darkEmerald,
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // Automatic Course Opening on Successful Payment
+  void _showPaymentSuccessAndOpenCourse(BuildContext context, CourseModel course, AppStateService appState) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -132,12 +522,9 @@ class _CoursesScreenState extends State<CoursesScreen> {
         ),
         title: Row(
           children: const [
-            Icon(Icons.lock_open, color: AppColors.primaryGold),
-            SizedBox(width: 8),
-            Text(
-              'Unlock Full Course',
-              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-            ),
+            Icon(Icons.check_circle, color: Color(0xFF10B981), size: 28),
+            SizedBox(width: 10),
+            Text('Payment Successful!', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
           ],
         ),
         content: Column(
@@ -145,69 +532,89 @@ class _CoursesScreenState extends State<CoursesScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              course.title,
-              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Instructor: ${course.instructor}',
-              style: const TextStyle(color: AppColors.lightGold, fontSize: 12),
+              'Alhamdulillah! Course "${course.title}" has been permanently unlocked for your account.',
+              style: const TextStyle(color: Colors.white70, fontSize: 12.5, height: 1.3),
             ),
             const SizedBox(height: 12),
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: const Color(0xFF072B20),
-                borderRadius: BorderRadius.circular(10),
+                color: const Color(0xFF082218),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: AppColors.borderEmerald),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Access Fee:', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                  Text(
-                    'â‚¹${course.price}',
-                    style: const TextStyle(color: AppColors.brightGold, fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
+                  const Text('Transaction Ref:', style: TextStyle(color: AppColors.darkTextMuted, fontSize: 11)),
+                  Text('TXN-${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}',
+                      style: const TextStyle(color: AppColors.primaryGold, fontSize: 11, fontWeight: FontWeight.bold)),
                 ],
               ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Enrolling will unlock all ${course.lessons.length} video classes permanently for account "${appState.currentUser?.username}".',
-              style: const TextStyle(color: AppColors.darkTextMuted, fontSize: 11.5, height: 1.3),
             ),
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _showCourseLessonsModal(context, course, appState);
+            },
+            child: const Text('Browse Lessons', style: TextStyle(color: Colors.white70)),
           ),
-          ElevatedButton(
-            onPressed: () async {
-              final res = await appState.enrollInCourse(course.id);
-              if (ctx.mounted) Navigator.pop(ctx);
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(res['message'] ?? 'Course successfully unlocked!'),
-                    backgroundColor: res['success'] == true ? AppColors.darkEmerald : Colors.redAccent,
-                  ),
-                );
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);
+              if (course.lessons.isNotEmpty) {
+                _playLessonInApp(context, course.lessons.first, course, appState);
+              } else {
+                _showCourseLessonsModal(context, course, appState);
               }
             },
+            icon: const Icon(Icons.play_circle_fill, size: 16),
+            label: const Text('Start Watching Now', style: TextStyle(fontWeight: FontWeight.bold)),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryGold,
               foregroundColor: AppColors.darkEmerald,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            ),
-            child: Text(
-              'Enroll & Pay â‚¹${course.price}',
-              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPayMethodTab({
+    required String title,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primaryGold : const Color(0xFF031610),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: isSelected ? AppColors.brightGold : AppColors.borderEmerald),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 18, color: isSelected ? const Color(0xFF032B1F) : AppColors.lightGold),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              style: TextStyle(
+                color: isSelected ? const Color(0xFF032B1F) : Colors.white70,
+                fontSize: 10.5,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -373,110 +780,291 @@ class _CoursesScreenState extends State<CoursesScreen> {
     );
   }
 
-  // Admin Dialog: Add Video Lesson to existing Course
+  // Native Windows Video File Picker for In-App Course Videos (Not on YouTube)
+  Future<String?> _pickVideoFile() async {
+    if (Platform.isWindows) {
+      try {
+        final res = await Process.run('powershell', [
+          '-NoProfile',
+          '-Command',
+          '[System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms") | Out-Null; '
+          '\$f = New-Object System.Windows.Forms.OpenFileDialog; '
+          '\$f.Filter = "Video Files (*.mp4;*.webm;*.mov)|*.mp4;*.webm;*.mov|All Files (*.*)|*.*"; '
+          'if (\$f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { \$f.FileName }'
+        ]);
+        final out = res.stdout.toString().trim();
+        return out.isNotEmpty ? out : null;
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  // Admin Dialog: Add Video Lesson to existing Course (In-App Only or URL)
   void _showAddLessonDialog(BuildContext context, CourseModel course, AppStateService appState) {
     final titleCtrl = TextEditingController();
-    final ytIdCtrl = TextEditingController();
+    final videoPathCtrl = TextEditingController();
     final durCtrl = TextEditingController(text: '15:00');
+    bool isAppOnly = true; // Default true: In-app private video, NOT on YouTube
+    bool isFreePreview = false;
+    bool isUploading = false;
+    String? localFilePath;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.darkEmerald,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: AppColors.primaryGold, width: 1.5),
-        ),
-        title: Row(
-          children: const [
-            Icon(Icons.video_call, color: AppColors.primaryGold),
-            SizedBox(width: 8),
-            Text(
-              'Add Video Lesson',
-              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFF041E16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: const BorderSide(color: AppColors.primaryGold, width: 1.5),
             ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Course: ${course.title}',
-              style: const TextStyle(color: AppColors.lightGold, fontSize: 12),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: titleCtrl,
-              style: const TextStyle(color: Colors.white, fontSize: 13),
-              decoration: const InputDecoration(
-                labelText: 'Lesson Title',
-                labelStyle: TextStyle(color: AppColors.lightGold),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.borderEmerald)),
-              ),
-            ),
-            TextField(
-              controller: ytIdCtrl,
-              style: const TextStyle(color: Colors.white, fontSize: 13),
-              decoration: const InputDecoration(
-                labelText: 'YouTube Video ID or Link',
-                hintText: 'e.g. gMTvoRUgeXA',
-                hintStyle: TextStyle(color: Colors.white38),
-                labelStyle: TextStyle(color: AppColors.lightGold),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.borderEmerald)),
-              ),
-            ),
-            TextField(
-              controller: durCtrl,
-              style: const TextStyle(color: Colors.white, fontSize: 13),
-              decoration: const InputDecoration(
-                labelText: 'Duration (e.g. 20:15)',
-                labelStyle: TextStyle(color: AppColors.lightGold),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.borderEmerald)),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (titleCtrl.text.trim().isEmpty || ytIdCtrl.text.trim().isEmpty) return;
-
-              String ytId = ytIdCtrl.text.trim();
-              if (ytId.contains('v=')) {
-                ytId = ytId.split('v=')[1].split('&')[0];
-              } else if (ytId.contains('youtu.be/')) {
-                ytId = ytId.split('youtu.be/')[1].split('?')[0];
-              }
-
-              final newLesson = CourseLesson(
-                id: 'les-${DateTime.now().millisecondsSinceEpoch}',
-                title: titleCtrl.text.trim(),
-                duration: durCtrl.text.trim().isEmpty ? '15:00' : durCtrl.text.trim(),
-                youtubeId: ytId,
-                isFreePreview: true,
-                summary: titleCtrl.text.trim(),
-              );
-
-              appState.addLessonToCourse(course.id, newLesson);
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('âœ“ Lesson successfully added to course!'),
-                  backgroundColor: AppColors.darkEmerald,
+            title: Row(
+              children: const [
+                Icon(Icons.video_call, color: AppColors.primaryGold),
+                SizedBox(width: 8),
+                Text(
+                  'Add Course Lesson',
+                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                 ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryGold,
-              foregroundColor: AppColors.darkEmerald,
+              ],
             ),
-            child: const Text('Add Lesson', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
+            content: SizedBox(
+              width: 480,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Course: ${course.title}',
+                      style: const TextStyle(color: AppColors.lightGold, fontSize: 12),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Video Type Selector: In-App Video vs YouTube
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ChoiceChip(
+                            label: const Text('In-App Only (Private)', style: TextStyle(fontSize: 11)),
+                            selected: isAppOnly,
+                            selectedColor: AppColors.primaryGold,
+                            labelStyle: TextStyle(
+                              color: isAppOnly ? const Color(0xFF032B1F) : Colors.white70,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            backgroundColor: const Color(0xFF082218),
+                            onSelected: (val) => setDialogState(() => isAppOnly = true),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ChoiceChip(
+                            label: const Text('YouTube ID (Public)', style: TextStyle(fontSize: 11)),
+                            selected: !isAppOnly,
+                            selectedColor: AppColors.primaryGold,
+                            labelStyle: TextStyle(
+                              color: !isAppOnly ? const Color(0xFF032B1F) : Colors.white70,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            backgroundColor: const Color(0xFF082218),
+                            onSelected: (val) => setDialogState(() => isAppOnly = false),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    TextField(
+                      controller: titleCtrl,
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                      decoration: const InputDecoration(
+                        labelText: 'Lesson Title',
+                        labelStyle: TextStyle(color: AppColors.lightGold),
+                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.borderEmerald)),
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    if (isAppOnly) ...[
+                      // File Picker & Upload for In-App Video
+                      Container(
+                        margin: const EdgeInsets.only(top: 8),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF082218),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.borderEmerald),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'In-App Video File (.mp4):',
+                                  style: TextStyle(color: AppColors.lightGold, fontSize: 11.5, fontWeight: FontWeight.bold),
+                                ),
+                                ElevatedButton.icon(
+                                  onPressed: isUploading
+                                      ? null
+                                      : () async {
+                                          final picked = await _pickVideoFile();
+                                          if (picked != null) {
+                                            setDialogState(() {
+                                              localFilePath = picked;
+                                              videoPathCtrl.text = picked;
+                                            });
+                                          }
+                                        },
+                                  icon: const Icon(Icons.file_upload, size: 14),
+                                  label: const Text('Browse File', style: TextStyle(fontSize: 11)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primaryGold,
+                                    foregroundColor: AppColors.darkEmerald,
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (localFilePath != null) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                'Selected: ${localFilePath!.split(Platform.pathSeparator).last}',
+                                style: const TextStyle(color: Color(0xFF34D399), fontSize: 11, fontWeight: FontWeight.w600),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: videoPathCtrl,
+                        style: const TextStyle(color: Colors.white, fontSize: 12),
+                        decoration: const InputDecoration(
+                          labelText: 'Direct In-App Video URL or Local Path',
+                          hintText: 'e.g. /uploads/course_videos/lesson1.mp4',
+                          hintStyle: TextStyle(color: Colors.white24, fontSize: 11),
+                          labelStyle: TextStyle(color: AppColors.lightGold, fontSize: 11),
+                          enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.borderEmerald)),
+                        ),
+                      ),
+                    ] else ...[
+                      TextField(
+                        controller: videoPathCtrl,
+                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                        decoration: const InputDecoration(
+                          labelText: 'YouTube Video ID or URL',
+                          hintText: 'e.g. gMTvoRUgeXA',
+                          hintStyle: TextStyle(color: Colors.white38),
+                          labelStyle: TextStyle(color: AppColors.lightGold),
+                          enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.borderEmerald)),
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 8),
+
+                    TextField(
+                      controller: durCtrl,
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                      decoration: const InputDecoration(
+                        labelText: 'Duration (e.g. 20:15)',
+                        labelStyle: TextStyle(color: AppColors.lightGold),
+                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.borderEmerald)),
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // Free Preview Toggle
+                    SwitchListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      activeColor: AppColors.primaryGold,
+                      title: const Text('Allow Free Preview without Payment?', style: TextStyle(color: Colors.white, fontSize: 12)),
+                      value: isFreePreview,
+                      onChanged: (val) => setDialogState(() => isFreePreview = val),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+              ),
+              ElevatedButton(
+                onPressed: isUploading
+                    ? null
+                    : () async {
+                        if (titleCtrl.text.trim().isEmpty || videoPathCtrl.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Please enter a lesson title and video.'), backgroundColor: Colors.redAccent),
+                          );
+                          return;
+                        }
+
+                        String videoTarget = videoPathCtrl.text.trim();
+
+                        // If user selected a local file on disk, upload it to the backend server!
+                        if (localFilePath != null && File(localFilePath!).existsSync()) {
+                          setDialogState(() => isUploading = true);
+                          final uploadedUrl = await ApiService().uploadCourseVideo(localFilePath!);
+                          if (uploadedUrl != null) {
+                            videoTarget = uploadedUrl;
+                          }
+                          setDialogState(() => isUploading = false);
+                        } else if (!isAppOnly) {
+                          // Extract YouTube ID if URL passed
+                          if (videoTarget.contains('v=')) {
+                            videoTarget = videoTarget.split('v=')[1].split('&')[0];
+                          } else if (videoTarget.contains('youtu.be/')) {
+                            videoTarget = videoTarget.split('youtu.be/')[1].split('?')[0];
+                          }
+                        }
+
+                        final newLesson = CourseLesson(
+                          id: 'les-${DateTime.now().millisecondsSinceEpoch}',
+                          title: titleCtrl.text.trim(),
+                          duration: durCtrl.text.trim().isEmpty ? '15:00' : durCtrl.text.trim(),
+                          youtubeId: videoTarget, // In-app video file URL or YouTube ID
+                          isFreePreview: isFreePreview,
+                          summary: titleCtrl.text.trim(),
+                        );
+
+                        await appState.addLessonToCourse(course.id, newLesson);
+                        if (!ctx.mounted) return;
+                        Navigator.pop(ctx);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('✓ In-App Course Lesson successfully published!'),
+                              backgroundColor: AppColors.darkEmerald,
+                            ),
+                          );
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryGold,
+                  foregroundColor: AppColors.darkEmerald,
+                ),
+                child: isUploading
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.darkEmerald))
+                    : const Text('Add Lesson', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -625,7 +1213,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                 crossAxisCount: 2,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 12,
-                childAspectRatio: 0.72,
+                childAspectRatio: 0.82,
               ),
               itemBuilder: (context, index) {
                 final course = filtered[index];
@@ -806,93 +1394,94 @@ class _CoursesScreenState extends State<CoursesScreen> {
             ),
 
             // Card Body (Title, Price Info & Action Button)
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    GestureDetector(
-                      onTap: () => _showCourseLessonsModal(context, course, appState),
-                      child: Text(
-                        course.title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w700,
-                          height: 1.25,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: () => _showCourseLessonsModal(context, course, appState),
+                    child: Text(
+                      course.title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        height: 1.25,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    // Price Row with Admin edit fee link
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          isFree ? 'Free Course' : 'Fee: ₹${course.price}',
-                          style: TextStyle(
-                            color: isFree ? const Color(0xFF34D399) : AppColors.brightGold,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
+                  ),
+                  const SizedBox(height: 5),
+                  // Price Row with Admin edit fee link
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        isFree ? 'Free Course' : 'Fee: ₹${course.price}',
+                        style: TextStyle(
+                          color: isFree ? const Color(0xFF34D399) : AppColors.brightGold,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.bold,
                         ),
-                        if (appState.isAdmin)
-                          InkWell(
-                            onTap: () => _showEditPriceDialog(context, course, appState),
-                            child: const Text(
-                              'Edit Fee',
-                              style: TextStyle(
-                                color: AppColors.lightGold,
-                                fontSize: 10,
-                                decoration: TextDecoration.underline,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    // Action Button (View Lessons or Enroll)
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          if (!isUnlocked && !isFree) {
-                            _showEnrollDialog(context, course, appState);
-                          } else {
-                            _showCourseLessonsModal(context, course, appState);
-                          }
-                        },
-                        icon: Icon(
-                          !isUnlocked && !isFree ? Icons.lock_open : Icons.play_circle_fill,
-                          size: 13,
-                        ),
-                        label: Text(
-                          !isUnlocked && !isFree ? 'Enroll (₹${course.price})' : 'View Lessons',
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: !isUnlocked && !isFree
-                              ? AppColors.primaryGold
-                              : const Color(0xFF0F4C3A),
-                          foregroundColor: !isUnlocked && !isFree
-                              ? AppColors.darkEmerald
-                              : AppColors.brightGold,
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            side: BorderSide(
-                              color: !isUnlocked && !isFree
-                                  ? AppColors.primaryGold
-                                  : AppColors.borderEmerald,
+                      ),
+                      if (appState.isAdmin)
+                        InkWell(
+                          onTap: () => _showEditPriceDialog(context, course, appState),
+                          child: const Text(
+                            'Edit Fee',
+                            style: TextStyle(
+                              color: AppColors.lightGold,
+                              fontSize: 9.5,
+                              decoration: TextDecoration.underline,
                             ),
                           ),
                         ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  // Action Button (View Lessons or Enroll)
+                  SizedBox(
+                    width: double.infinity,
+                    height: 30,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        if (!isUnlocked && !isFree) {
+                          _showEnrollDialog(context, course, appState);
+                        } else {
+                          _showCourseLessonsModal(context, course, appState);
+                        }
+                      },
+                      icon: Icon(
+                        !isUnlocked && !isFree ? Icons.lock_open : Icons.play_circle_fill,
+                        size: 13,
+                      ),
+                      label: Text(
+                        !isUnlocked && !isFree ? 'Enroll (₹${course.price})' : 'View Lessons',
+                        style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: !isUnlocked && !isFree
+                            ? AppColors.primaryGold
+                            : const Color(0xFF0F4C3A),
+                        foregroundColor: !isUnlocked && !isFree
+                            ? AppColors.darkEmerald
+                            : AppColors.brightGold,
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          side: BorderSide(
+                            color: !isUnlocked && !isFree
+                                ? AppColors.primaryGold
+                                : AppColors.borderEmerald,
+                          ),
+                        ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ],

@@ -318,49 +318,56 @@ class _QuotesScreenState extends State<QuotesScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'Daily Islamic Quotes & Hadith',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          'Daily Islamic Quotes & Hadith',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Authentic sayings & spiritual reminders for daily reflection',
-                        style: TextStyle(
-                          color: AppColors.darkTextMuted,
-                          fontSize: 11,
+                        SizedBox(height: 2),
+                        Text(
+                          'Authentic sayings & spiritual reminders for daily reflection',
+                          style: TextStyle(
+                            color: AppColors.darkTextMuted,
+                            fontSize: 11,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
 
                   // Admin-Only Post Button (Visible ONLY when isAdmin is true)
-                  if (appState.isAdmin)
+                  if (appState.isAdmin) ...[
+                    const SizedBox(width: 8),
                     ElevatedButton.icon(
                       onPressed: () => _showPostQuoteDialog(context, appState),
-                      icon: const Icon(Icons.add, size: 16),
+                      icon: const Icon(Icons.add, size: 15),
                       label: const Text('Post Quote'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primaryGold,
                         foregroundColor: AppColors.darkEmerald,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
                         textStyle: const TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 11.5,
+                          fontSize: 11,
                         ),
                       ),
                     ),
+                  ],
                 ],
               ),
             ),

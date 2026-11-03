@@ -167,6 +167,45 @@ class ApiService {
     }
   }
 
+  Future<bool> updatePlaylist(PlaylistModel playlist) async {
+    try {
+      final res = await http.put(
+        Uri.parse('$baseUrl/playlists/${playlist.id}'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'id': playlist.id,
+          'title': playlist.title,
+          'urduTitle': playlist.urduTitle,
+          'category': playlist.category,
+          'topicKey': playlist.topicKey,
+          'thumbnail': playlist.thumbnail,
+          'description': playlist.description,
+          'videos': playlist.videos.map((v) => v.toJson()).toList(),
+        }),
+      ).timeout(const Duration(seconds: 4));
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<String?> uploadCourseVideo(String filePath) async {
+    try {
+      final uri = Uri.parse('$baseUrl/courses/upload-video');
+      final request = http.MultipartRequest('POST', uri);
+      request.files.add(await http.MultipartFile.fromPath('file', filePath));
+      final streamedResponse = await request.send().timeout(const Duration(minutes: 5));
+      final response = await http.Response.fromStream(streamedResponse);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        return data['videoUrl'] as String?;
+      }
+    } catch (e) {
+      debugPrint('[ApiService] uploadCourseVideo error: $e');
+    }
+    return null;
+  }
+
   // ---------------------------------------------------------------------------
   // Courses
   // ---------------------------------------------------------------------------
