@@ -347,27 +347,24 @@ class _QuotesScreenState extends State<QuotesScreen> {
                     ),
                   ),
 
-                  // Admin-Only Post Button (Visible ONLY when isAdmin is true)
-                  if (appState.isAdmin) ...[
-                    const SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      onPressed: () => _showPostQuoteDialog(context, appState),
-                      icon: const Icon(Icons.add, size: 15),
-                      label: const Text('Post Quote'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryGold,
-                        foregroundColor: AppColors.darkEmerald,
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        textStyle: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 11,
-                        ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: () => _showPostQuoteDialog(context, appState),
+                    icon: const Icon(Icons.add, size: 15),
+                    label: const Text('Post Quote'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryGold,
+                      foregroundColor: AppColors.darkEmerald,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      textStyle: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
                       ),
                     ),
-                  ],
+                  ),
                 ],
               ),
             ),

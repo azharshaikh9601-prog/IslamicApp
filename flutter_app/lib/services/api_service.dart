@@ -44,6 +44,19 @@ class ApiService {
   ApiService._internal();
 
   // ---------------------------------------------------------------------------
+  // Real YouTube Live Feed for Hafiz Hasnain Jaani
+  // ---------------------------------------------------------------------------
+  Future<Map<String, dynamic>?> fetchLiveYouTubeFeed() async {
+    try {
+      final res = await http.get(Uri.parse('$baseUrl/youtube/live-feed')).timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200) {
+        return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  // ---------------------------------------------------------------------------
   // Profile
   // ---------------------------------------------------------------------------
   Future<Map<String, dynamic>?> fetchProfile() async {

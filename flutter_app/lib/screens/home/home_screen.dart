@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/initial_data.dart';
@@ -55,35 +56,55 @@ class HomeScreen extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            // Admin Status Chip below Salah Schedule
+            // Real World Time & Islamic Date Bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: GestureDetector(
-                  onTap: () => onTabSelected(5), // Switch to Admin Dashboard
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0A241A),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.borderEmerald),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.access_time_filled, color: AppColors.primaryGold, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '${DateFormat('EEEE, d MMM yyyy').format(DateTime.now())} • Local: ${DateFormat('hh:mm a').format(DateTime.now())}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
                         ),
-                      ],
-                    ),
-                    child: const Text(
-                      'admin@scholar.com',
-                      style: TextStyle(
-                        color: Color(0xFF032B1F),
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.bold,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF133629),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.wifi, color: Color(0xFF34D399), size: 10),
+                          SizedBox(width: 4),
+                          Text(
+                            'LIVE SYNC',
+                            style: TextStyle(
+                              color: Color(0xFF34D399),
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

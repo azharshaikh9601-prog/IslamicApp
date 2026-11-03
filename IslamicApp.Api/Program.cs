@@ -60,6 +60,98 @@ app.MapGet("/api/health", (SqlDatabaseService db) => Results.Ok(new
 }));
 
 // ---------------------------------------------------------------------------
+// Real Live YouTube Feed for Hafiz Hasnain Jaani (@HAFIZHASNAINJAANI)
+// ---------------------------------------------------------------------------
+app.MapGet("/api/youtube/live-feed", async (SqlDatabaseService db) =>
+{
+    const string channelId = "UC1NRrbs7Ys4yVNsQx83NhsA";
+    var feedUrl = $"https://www.youtube.com/feeds/videos.xml?channel_id={channelId}";
+    
+    using var http = new HttpClient();
+    http.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+    
+    try
+    {
+        var xml = await http.GetStringAsync(feedUrl);
+        var doc = System.Xml.Linq.XDocument.Parse(xml);
+        System.Xml.Linq.XNamespace atom = "http://www.w3.org/2005/Atom";
+        System.Xml.Linq.XNamespace yt = "http://www.youtube.com/xml/schemas/2015";
+        System.Xml.Linq.XNamespace media = "http://search.yahoo.com/mrss/";
+
+        var entries = doc.Root?.Elements(atom + "entry") ?? Enumerable.Empty<System.Xml.Linq.XElement>();
+        var resultVideos = new List<VideoItem>();
+
+        foreach (var entry in entries)
+        {
+            var videoId = entry.Element(yt + "videoId")?.Value;
+            var title = entry.Element(atom + "title")?.Value;
+            var publishedStr = entry.Element(atom + "published")?.Value;
+            var mediaGroup = entry.Element(media + "group");
+            
+            var viewsCount = "0";
+            var likesCount = "0";
+            var description = "";
+            var thumbUrl = $"https://img.youtube.com/vi/{videoId}/hqdefault.jpg";
+
+            if (mediaGroup != null)
+            {
+                var community = mediaGroup.Element(media + "community");
+                if (community != null)
+                {
+                    viewsCount = community.Element(media + "statistics")?.Attribute("views")?.Value ?? "0";
+                    likesCount = community.Element(media + "starRating")?.Attribute("count")?.Value ?? "0";
+                }
+                var mediaThumb = mediaGroup.Element(media + "thumbnail")?.Attribute("url")?.Value;
+                if (!string.IsNullOrEmpty(mediaThumb)) thumbUrl = mediaThumb;
+                description = mediaGroup.Element(media + "description")?.Value ?? "";
+            }
+
+            if (!string.IsNullOrEmpty(videoId) && !string.IsNullOrEmpty(title))
+            {
+                // Format views
+                var formattedViews = viewsCount;
+                if (long.TryParse(viewsCount, out var vCount))
+                {
+                    formattedViews = vCount >= 1000000 ? $"{(vCount / 1000000.0):0.#}M views" :
+                                     vCount >= 1000 ? $"{(vCount / 1000.0):0.#}K views" : $"{vCount} views";
+                }
+
+                var item = new VideoItem
+                {
+                    Id = $"vid-{videoId}",
+                    YoutubeId = videoId,
+                    Title = title,
+                    Duration = "Lesson",
+                    Views = formattedViews,
+                    Date = publishedStr ?? "",
+                    Category = title.Contains("Surah", StringComparison.OrdinalIgnoreCase) || title.Contains("Quran", StringComparison.OrdinalIgnoreCase) ? "qaida" :
+                               title.Contains("Wuzu", StringComparison.OrdinalIgnoreCase) || title.Contains("Wudu", StringComparison.OrdinalIgnoreCase) ? "wudu" : "namaz",
+                    Featured = true,
+                    Description = description
+                };
+
+                resultVideos.Add(item);
+                // Also add/sync to database asynchronously
+                _ = db.AddVideoAsync(item);
+            }
+        }
+
+        return Results.Ok(new
+        {
+            channelId,
+            handle = "@HAFIZHASNAINJAANI",
+            subscribers = "413K Subscribers",
+            totalVideos = resultVideos.Count,
+            videos = resultVideos
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Failed to fetch YouTube feed: {ex.Message}");
+    }
+});
+
+// ---------------------------------------------------------------------------
 // In-App Video & Shorts Player Embed
 // ---------------------------------------------------------------------------
 app.MapGet("/api/player", (HttpContext httpContext, string? v, bool? isShort) =>

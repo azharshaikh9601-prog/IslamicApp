@@ -3,6 +3,7 @@ import '../core/theme/app_colors.dart';
 import '../models/user_model.dart';
 import '../services/storage_service.dart';
 import 'auth/auth_modal.dart';
+import 'video_player/in_app_player_modal.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final int currentTabIndex;
@@ -134,7 +135,30 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                 ),
               ],
 
-              const SizedBox(width: 6),
+              const SizedBox(width: 4),
+
+              // Notification Bell Icon with Badge for New Video Uploads
+              AnimatedBuilder(
+                animation: AppStateService(),
+                builder: (context, _) {
+                  final appState = AppStateService();
+                  final count = appState.unreadNotificationsCount;
+                  return IconButton(
+                    onPressed: () => _showNotificationsModal(context, appState),
+                    tooltip: 'New Video Notifications',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                    icon: Badge(
+                      isLabelVisible: count > 0,
+                      label: Text('$count', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
+                      backgroundColor: Colors.redAccent,
+                      child: const Icon(Icons.notifications_active_outlined, color: AppColors.primaryGold, size: 21),
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(width: 4),
 
               // Right Actions: User Profile Chip
               GestureDetector(
@@ -352,6 +376,164 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _showNotificationsModal(BuildContext context, AppStateService appState) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        final notifications = appState.newVideoNotifications.isNotEmpty
+            ? appState.newVideoNotifications
+            : appState.videos.take(5).toList();
+
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.72,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: const Color(0xFF031E16),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border.all(color: AppColors.primaryGold.withOpacity(0.5), width: 1.5),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Modal Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: const [
+                      Icon(Icons.notifications_active, color: AppColors.primaryGold, size: 22),
+                      SizedBox(width: 8),
+                      Text(
+                        'New Video Notifications',
+                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  TextButton.icon(
+                    onPressed: () {
+                      appState.markNotificationsRead();
+                      Navigator.pop(ctx);
+                    },
+                    icon: const Icon(Icons.done_all, size: 16, color: AppColors.lightGold),
+                    label: const Text('Mark Read', style: TextStyle(color: AppColors.lightGold, fontSize: 11)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              const Text(
+                'Latest authentic Islamic uploads from Hafiz Hasnain Jaani (Live YouTube Sync)',
+                style: TextStyle(color: AppColors.darkTextMuted, fontSize: 11),
+              ),
+              const SizedBox(height: 14),
+
+              // Videos List
+              Expanded(
+                child: notifications.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'No new video notifications right now.',
+                          style: TextStyle(color: AppColors.darkTextMuted, fontSize: 13),
+                        ),
+                      )
+                    : ListView.separated(
+                        itemCount: notifications.length,
+                        separatorBuilder: (_, __) => const Divider(color: AppColors.borderEmerald, height: 16),
+                        itemBuilder: (context, idx) {
+                          final video = notifications[idx];
+                          final isFirst = idx < 3;
+                          return InkWell(
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              appState.markVideoWatched(video.id);
+                              InAppPlayerModal.show(context, video: video, playlist: appState.playlists.isNotEmpty ? appState.playlists.first : null);
+                            },
+                            child: Row(
+                              children: [
+                                Stack(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.network(
+                                        video.thumbnailUrl,
+                                        width: 100,
+                                        height: 60,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => Container(
+                                          width: 100,
+                                          height: 60,
+                                          color: AppColors.surfaceEmerald,
+                                          child: const Icon(Icons.play_circle_fill, color: AppColors.primaryGold),
+                                        ),
+                                      ),
+                                    ),
+                                    if (isFirst)
+                                      Positioned(
+                                        top: 4,
+                                        left: 4,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.redAccent,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: const Text(
+                                            'NEW',
+                                            style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        video.title,
+                                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          const Icon(Icons.visibility, size: 12, color: AppColors.lightGold),
+                                          const SizedBox(width: 4),
+                                          Text(video.views, style: const TextStyle(color: AppColors.lightGold, fontSize: 10.5)),
+                                          const SizedBox(width: 10),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF133629),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              video.category.toUpperCase(),
+                                              style: const TextStyle(color: AppColors.brightGold, fontSize: 8.5, fontWeight: FontWeight.bold),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.play_arrow_rounded, color: AppColors.primaryGold, size: 24),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

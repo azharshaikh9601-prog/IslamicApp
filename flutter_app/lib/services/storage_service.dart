@@ -486,9 +486,117 @@ class AppStateService extends ChangeNotifier {
       }
 
       await loadAdminUsers();
+      await syncRealYouTubeFeed();
     } catch (_) {}
 
     _isLoading = false;
     notifyListeners();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Real YouTube Live Feed & Video Notifications
+  // ---------------------------------------------------------------------------
+  List<VideoModel> _newVideoNotifications = [];
+  List<VideoModel> get newVideoNotifications => _newVideoNotifications;
+  int _unreadNotificationsCount = 0;
+  int get unreadNotificationsCount => _unreadNotificationsCount;
+
+  void markNotificationsRead() {
+    _unreadNotificationsCount = 0;
+    notifyListeners();
+  }
+
+  Future<void> syncRealYouTubeFeed() async {
+    try {
+      final feed = await _api.fetchLiveYouTubeFeed();
+      if (feed != null && feed['videos'] is List) {
+        final rawVideos = feed['videos'] as List;
+        final List<VideoModel> liveVideos = [];
+
+        for (final item in rawVideos) {
+          final id = item['id'] as String? ?? '';
+          final yId = item['youtubeId'] as String? ?? '';
+          final title = item['title'] as String? ?? '';
+          final cat = item['category'] as String? ?? 'namaz';
+          final duration = item['duration'] as String? ?? 'Lesson';
+          final views = item['views'] as String? ?? '0 views';
+
+          if (id.isNotEmpty && title.isNotEmpty) {
+            liveVideos.add(VideoModel(
+              id: id,
+              youtubeId: yId,
+              title: title,
+              category: cat,
+              duration: duration,
+              views: views,
+              date: item['date'] as String? ?? 'Recently Uploaded',
+              description: item['description'] as String? ?? title,
+              featured: true,
+            ));
+          }
+        }
+
+        if (liveVideos.isNotEmpty) {
+          // Identify new videos not previously loaded in _videos
+          final existingIds = _videos.map((v) => v.youtubeId).toSet();
+          final List<VideoModel> brandNew = [];
+
+          for (final lv in liveVideos) {
+            if (!existingIds.contains(lv.youtubeId)) {
+              brandNew.add(lv);
+            }
+          }
+
+          if (brandNew.isNotEmpty) {
+            _newVideoNotifications.insertAll(0, brandNew);
+            _unreadNotificationsCount += brandNew.length;
+            // Prepend new videos to lesson tab
+            _videos.insertAll(0, brandNew);
+          } else if (_newVideoNotifications.isEmpty) {
+            // Populate recent 5 videos as notifications
+            _newVideoNotifications = liveVideos.take(5).toList();
+            _unreadNotificationsCount = 3; // Show recent new uploads
+          }
+
+          // Ensure real live videos are present in _videos with real views
+          for (final lv in liveVideos.reversed) {
+            final idx = _videos.indexWhere((v) => v.youtubeId == lv.youtubeId);
+            if (idx >= 0) {
+              // Update with real views & data
+              _videos[idx] = lv;
+            } else {
+              _videos.insert(0, lv);
+            }
+          }
+
+          // Update playlists with new videos
+          for (int i = 0; i < _playlists.length; i++) {
+            final p = _playlists[i];
+            final updatedVideos = List<VideoModel>.from(p.videos);
+            for (final lv in liveVideos) {
+              if (p.category == lv.category || p.category == 'all') {
+                if (!updatedVideos.any((v) => v.youtubeId == lv.youtubeId)) {
+                  updatedVideos.insert(0, lv);
+                }
+              }
+            }
+            if (updatedVideos.length != p.videos.length) {
+              _playlists[i] = PlaylistModel(
+                id: p.id,
+                title: p.title,
+                urduTitle: p.urduTitle,
+                category: p.category,
+                topicKey: p.topicKey,
+                thumbnail: p.thumbnail,
+                description: p.description,
+                videos: updatedVideos,
+              );
+            }
+          }
+
+          notifyListeners();
+        }
+      }
+    } catch (_) {}
   }
 }

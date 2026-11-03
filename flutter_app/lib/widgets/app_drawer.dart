@@ -104,7 +104,7 @@ class AppDrawer extends StatelessWidget {
                           ),
                         ),
                         child: const Text(
-                          '411K+ Subscribers',
+                          '413K Subscribers',
                           style: TextStyle(
                             color: AppColors.lightGold,
                             fontSize: 10,

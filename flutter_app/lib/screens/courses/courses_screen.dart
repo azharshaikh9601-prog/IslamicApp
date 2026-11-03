@@ -619,7 +619,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
     );
   }
 
-  // Admin Dialog: Create New Course with custom Fee
+  // Dialog: Create New Course with custom Fee and Device Video Upload
   void _showCreateCourseDialog(BuildContext context, AppStateService appState) {
     final titleCtrl = TextEditingController();
     final urduCtrl = TextEditingController();
@@ -627,9 +627,13 @@ class _CoursesScreenState extends State<CoursesScreen> {
     final descCtrl = TextEditingController();
     final thumbCtrl = TextEditingController();
     String category = 'namaz';
+    String? selectedVideoPath;
+    bool isUploading = false;
+    String uploadStatus = '';
 
     showDialog(
       context: context,
+      barrierDismissible: !isUploading,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: AppColors.darkEmerald,
@@ -642,7 +646,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
               Icon(Icons.add_business, color: AppColors.primaryGold),
               SizedBox(width: 8),
               Text(
-                'Admin: Create Course',
+                'Create New Course',
                 style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ],
@@ -650,6 +654,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TextField(
                   controller: titleCtrl,
@@ -664,7 +669,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                   controller: urduCtrl,
                   style: const TextStyle(color: Colors.white, fontSize: 13),
                   decoration: const InputDecoration(
-                    labelText: 'Urdu Title (Ø§Ø±Ø¯Ùˆ Ø¹Ù†ÙˆØ§Ù†)',
+                    labelText: 'Urdu Title (اردو عنوان)',
                     labelStyle: TextStyle(color: AppColors.lightGold),
                     enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.borderEmerald)),
                   ),
@@ -674,7 +679,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                   keyboardType: TextInputType.number,
                   style: const TextStyle(color: Colors.white, fontSize: 13),
                   decoration: const InputDecoration(
-                    labelText: 'Course Fee (in â‚¹, enter 0 for Free)',
+                    labelText: 'Course Fee (in ₹, enter 0 for Free)',
                     hintText: '0 for Free, or enter custom fee',
                     hintStyle: TextStyle(color: Colors.white38),
                     labelStyle: TextStyle(color: AppColors.lightGold),
@@ -685,7 +690,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                   controller: thumbCtrl,
                   style: const TextStyle(color: Colors.white, fontSize: 13),
                   decoration: const InputDecoration(
-                    labelText: 'Thumbnail Image URL or YouTube ID',
+                    labelText: 'Thumbnail Image URL (Optional)',
                     labelStyle: TextStyle(color: AppColors.lightGold),
                     enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.borderEmerald)),
                   ),
@@ -718,56 +723,189 @@ class _CoursesScreenState extends State<CoursesScreen> {
                     if (val != null) setDialogState(() => category = val);
                   },
                 ),
+                const SizedBox(height: 16),
+
+                // Upload Video Option for the Course (Select from Device)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0C241C),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.primaryGold.withOpacity(0.5)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: const [
+                          Icon(Icons.video_library, color: AppColors.primaryGold, size: 18),
+                          SizedBox(width: 8),
+                          Text(
+                            'Course Video (Upload from Device)',
+                            style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Select a private video from your device (In-App only, not on YouTube).',
+                        style: TextStyle(color: AppColors.darkTextMuted, fontSize: 10.5),
+                      ),
+                      const SizedBox(height: 10),
+                      if (selectedVideoPath == null)
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () async {
+                              final picked = await _pickVideoFile();
+                              if (picked != null) {
+                                setDialogState(() {
+                                  selectedVideoPath = picked;
+                                });
+                              }
+                            },
+                            icon: const Icon(Icons.drive_folder_upload, size: 16),
+                            label: const Text('Select Video from Device'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF133629),
+                              foregroundColor: AppColors.primaryGold,
+                              side: const BorderSide(color: AppColors.borderEmerald),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                            ),
+                          ),
+                        )
+                      else
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF133629),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.primaryGold),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.check_circle, color: Color(0xFF34D399), size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      selectedVideoPath!.split(Platform.pathSeparator).last,
+                                      style: const TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.bold),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      'File ready (${(File(selectedVideoPath!).lengthSync() / (1024 * 1024)).toStringAsFixed(1)} MB)',
+                                      style: const TextStyle(color: AppColors.lightGold, fontSize: 10),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.close, color: Colors.redAccent, size: 16),
+                                onPressed: () => setDialogState(() => selectedVideoPath = null),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+
+                if (isUploading) ...[
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryGold),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(uploadStatus, style: const TextStyle(color: AppColors.lightGold, fontSize: 11)),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(ctx),
+              onPressed: isUploading ? null : () => Navigator.pop(ctx),
               child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
             ),
             ElevatedButton(
-              onPressed: () {
-                if (titleCtrl.text.trim().isEmpty) return;
+              onPressed: isUploading
+                  ? null
+                  : () async {
+                      if (titleCtrl.text.trim().isEmpty) return;
 
-                final fee = int.tryParse(priceCtrl.text.trim()) ?? 0;
-                final thumb = thumbCtrl.text.trim().isEmpty
-                    ? 'https://img.youtube.com/vi/gMTvoRUgeXA/hqdefault.jpg'
-                    : (thumbCtrl.text.trim().startsWith('http')
-                        ? thumbCtrl.text.trim()
-                        : 'https://img.youtube.com/vi/${thumbCtrl.text.trim()}/hqdefault.jpg');
+                      final fee = int.tryParse(priceCtrl.text.trim()) ?? 0;
+                      final thumb = thumbCtrl.text.trim().isEmpty
+                          ? 'https://img.youtube.com/vi/gMTvoRUgeXA/hqdefault.jpg'
+                          : (thumbCtrl.text.trim().startsWith('http')
+                              ? thumbCtrl.text.trim()
+                              : 'https://img.youtube.com/vi/${thumbCtrl.text.trim()}/hqdefault.jpg');
 
-                final newCourse = CourseModel(
-                  id: 'course-${DateTime.now().millisecondsSinceEpoch}',
-                  title: titleCtrl.text.trim(),
-                  urduTitle: urduCtrl.text.trim().isEmpty ? titleCtrl.text.trim() : urduCtrl.text.trim(),
-                  category: category,
-                  price: fee,
-                  originalPrice: fee,
-                  discountPercent: 0,
-                  duration: 'Self-paced',
-                  lessonsCount: 0,
-                  badge: fee == 0 ? 'FREE' : 'COURSE',
-                  instructor: 'Hafiz Hasnain Jaani',
-                  rating: 5.0,
-                  studentsEnrolled: 0,
-                  thumbnail: thumb,
-                  description: descCtrl.text.trim().isEmpty
-                      ? 'Authentic step-by-step Islamic course.'
-                      : descCtrl.text.trim(),
-                  highlights: ['Authentic Fiqh-e-Hanafi', 'Practical step-by-step classes'],
-                  lessons: [],
-                );
+                      List<CourseLesson> initialLessons = [];
 
-                appState.addCourse(newCourse);
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('âœ“ Course successfully created!'),
-                    backgroundColor: AppColors.darkEmerald,
-                  ),
-                );
-              },
+                      // If admin selected a video from device, upload it now
+                      if (selectedVideoPath != null) {
+                        setDialogState(() {
+                          isUploading = true;
+                          uploadStatus = 'Uploading device video to app storage...';
+                        });
+
+                        final uploadedPath = await ApiService().uploadCourseVideo(selectedVideoPath!);
+                        final videoReference = uploadedPath ?? selectedVideoPath!;
+
+                        initialLessons.add(
+                          CourseLesson(
+                            id: 'les-1',
+                            title: 'Lesson 1: ${titleCtrl.text.trim()} (In-App Video)',
+                            duration: 'Full Lesson',
+                            youtubeId: videoReference,
+                            isFreePreview: fee == 0,
+                            summary: 'Private course lesson video uploaded from device.',
+                          ),
+                        );
+                      }
+
+                      final newCourse = CourseModel(
+                        id: 'course-${DateTime.now().millisecondsSinceEpoch}',
+                        title: titleCtrl.text.trim(),
+                        urduTitle: urduCtrl.text.trim().isEmpty ? titleCtrl.text.trim() : urduCtrl.text.trim(),
+                        category: category,
+                        price: fee,
+                        originalPrice: fee,
+                        discountPercent: 0,
+                        duration: 'Self-paced',
+                        lessonsCount: initialLessons.length,
+                        badge: fee == 0 ? 'FREE' : 'COURSE',
+                        instructor: 'Hafiz Hasnain Jaani',
+                        rating: 5.0,
+                        studentsEnrolled: 0,
+                        thumbnail: thumb,
+                        description: descCtrl.text.trim().isEmpty
+                            ? 'Authentic step-by-step Islamic course.'
+                            : descCtrl.text.trim(),
+                        highlights: ['Authentic Fiqh-e-Hanafi', 'Practical step-by-step classes'],
+                        lessons: initialLessons,
+                      );
+
+                      await appState.addCourse(newCourse);
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('✓ Course successfully created with uploaded video!'),
+                            backgroundColor: AppColors.darkEmerald,
+                          ),
+                        );
+                      }
+                    },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryGold,
                 foregroundColor: AppColors.darkEmerald,
@@ -1158,27 +1296,24 @@ class _CoursesScreenState extends State<CoursesScreen> {
                     ],
                   ),
 
-                  // Admin-Only Course Creation Button (Visible ONLY when isAdmin is true)
-                  if (appState.isAdmin) ...[
-                    const SizedBox(height: 14),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () => _showCreateCourseDialog(context, appState),
-                        icon: const Icon(Icons.add_rounded, size: 16),
-                        label: const Text('Admin: Create New Course'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryGold,
-                          foregroundColor: AppColors.darkEmerald,
-                          padding: const EdgeInsets.symmetric(vertical: 9),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _showCreateCourseDialog(context, appState),
+                      icon: const Icon(Icons.add_rounded, size: 16),
+                      label: const Text('Create New Course (Course Banayein)'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryGold,
+                        foregroundColor: AppColors.darkEmerald,
+                        padding: const EdgeInsets.symmetric(vertical: 9),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
                         ),
+                        textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                       ),
                     ),
-                  ],
+                  ),
                 ],
               ),
             ),
