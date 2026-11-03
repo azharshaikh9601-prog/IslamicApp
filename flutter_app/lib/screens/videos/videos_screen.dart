@@ -394,7 +394,7 @@ class _VideosScreenState extends State<VideosScreen> {
                             child: ElevatedButton.icon(
                               onPressed: () => _showCreatePlaylistDialog(context, appState),
                               icon: const Icon(Icons.playlist_add, size: 16),
-                              label: const Text('+ Create Playlist'),
+                              label: const Text('Create Playlist'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primaryGold,
                                 foregroundColor: AppColors.darkEmerald,

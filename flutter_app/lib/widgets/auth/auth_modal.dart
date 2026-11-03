@@ -267,7 +267,7 @@ class _AuthModalState extends State<AuthModal> with SingleTickerProviderStateMix
 
             // Tab Views
             SizedBox(
-              height: 330,
+              height: 380,
               child: TabBarView(
                 controller: _tabController,
                 children: [
@@ -336,13 +336,13 @@ class _AuthModalState extends State<AuthModal> with SingleTickerProviderStateMix
               fillColor: const Color(0xFF021610),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           ElevatedButton(
             onPressed: _isSubmitting ? null : _handleLogin,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryGold,
               foregroundColor: AppColors.darkEmerald,
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(vertical: 11),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
             child: _isSubmitting
@@ -356,19 +356,56 @@ class _AuthModalState extends State<AuthModal> with SingleTickerProviderStateMix
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   ),
           ),
+          const SizedBox(height: 12),
+          // Demo Admin Credentials Banner
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF05271D),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.primaryGold.withOpacity(0.5)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.admin_panel_settings, color: AppColors.primaryGold, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        'Demo Admin Credentials:',
+                        style: TextStyle(color: AppColors.primaryGold, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        'admin@hafizhasnainjaani.com • Admin@1234',
+                        style: TextStyle(color: Colors.white70, fontSize: 9.5),
+                      ),
+                    ],
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: _fillDemoAdmin,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryGold,
+                    foregroundColor: AppColors.darkEmerald,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text('Auto Fill', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ),
           const Spacer(),
           // Quick login helper buttons
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               TextButton(
-                onPressed: _fillDemoAdmin,
-                child: const Text('Admin Demo', style: TextStyle(color: AppColors.primaryGold, fontSize: 11)),
-              ),
-              const Text('•', style: TextStyle(color: Colors.white38)),
-              TextButton(
                 onPressed: _fillDemoStudent,
-                child: const Text('Student Demo', style: TextStyle(color: AppColors.lightGold, fontSize: 11)),
+                child: const Text('Student Demo (Talib-e-Ilm)', style: TextStyle(color: AppColors.lightGold, fontSize: 11)),
               ),
             ],
           ),

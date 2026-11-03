@@ -347,7 +347,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
                     ElevatedButton.icon(
                       onPressed: () => _showPostQuoteDialog(context, appState),
                       icon: const Icon(Icons.add, size: 16),
-                      label: const Text('+ Post Quote'),
+                      label: const Text('Post Quote'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primaryGold,
                         foregroundColor: AppColors.darkEmerald,

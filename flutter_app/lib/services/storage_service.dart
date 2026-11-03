@@ -30,8 +30,8 @@ class AppStateService extends ChangeNotifier {
   UserModel? get currentUser => _currentUser;
   bool get isLoggedIn => _currentUser != null;
 
-  // Admin Mode (True if logged in user is admin, or default true for scholar app administration)
-  bool _isAdmin = true;
+  // Admin Mode (Strictly false by default for guests; true only when logged in as Admin)
+  bool _isAdmin = false;
   bool get isAdmin => _currentUser != null ? _currentUser!.isAdmin : _isAdmin;
 
   void setAdminMode(bool value) {
@@ -102,6 +102,7 @@ class AppStateService extends ChangeNotifier {
 
   void signOut() async {
     _currentUser = null;
+    _isAdmin = false;
     await _saveUserSession();
     notifyListeners();
   }
