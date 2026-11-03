@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../core/theme/app_colors.dart';
+import '../services/storage_service.dart';
+import 'auth/auth_modal.dart';
 
 class AppDrawer extends StatelessWidget {
   final Function(int) onTabSelected;
@@ -210,6 +212,39 @@ class AppDrawer extends StatelessWidget {
                   title: 'YouTube Channel',
                   subtitle: '@HAFIZHASNAINJAANI',
                   onTap: () => _openUrl('https://youtube.com/@hafizhasnainjaani'),
+                ),
+                const Divider(color: AppColors.borderEmerald, thickness: 1),
+                // Account / Auth
+                Builder(
+                  builder: (context) {
+                    final appState = AppStateService();
+                    final user = appState.currentUser;
+                    if (user != null) {
+                      return _buildDrawerItem(
+                        icon: Icons.logout,
+                        title: 'Sign Out (${user.username})',
+                        subtitle: user.email,
+                        onTap: () {
+                          Navigator.pop(context);
+                          appState.signOut();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Successfully signed out.'), backgroundColor: AppColors.darkEmerald),
+                          );
+                        },
+                      );
+                    } else {
+                      return _buildDrawerItem(
+                        icon: Icons.login,
+                        title: 'Sign In / Register',
+                        subtitle: '8-digit password account',
+                        badge: 'Login',
+                        onTap: () {
+                          Navigator.pop(context);
+                          AuthModal.show(context);
+                        },
+                      );
+                    }
+                  },
                 ),
               ],
             ),

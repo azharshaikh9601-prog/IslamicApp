@@ -84,6 +84,31 @@ BEGIN
         [AsrFactor] int NOT NULL,
         CONSTRAINT [PK_UserStates] PRIMARY KEY ([Id])
     );
+END;
+
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Users')
+BEGIN
+    CREATE TABLE [Users] (
+        [Id] nvarchar(100) NOT NULL,
+        [Username] nvarchar(150) NOT NULL,
+        [Email] nvarchar(200) NOT NULL,
+        [PasswordHash] nvarchar(500) NOT NULL,
+        [IsAdmin] bit NOT NULL,
+        [EnrolledCourseIds] nvarchar(max) NOT NULL,
+        [CreatedAt] datetime2 NOT NULL,
+        [LastLoginAt] datetime2 NULL,
+        CONSTRAINT [PK_Users] PRIMARY KEY ([Id])
+    );
+END;
+
+IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Courses')
+BEGIN
+    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Courses' AND COLUMN_NAME = 'Highlights')
+        ALTER TABLE [Courses] ADD [Highlights] nvarchar(max) NULL;
+    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Courses' AND COLUMN_NAME = 'Lessons')
+        ALTER TABLE [Courses] ADD [Lessons] nvarchar(max) NULL;
+    EXEC('UPDATE [Courses] SET [Highlights] = ''[]'' WHERE [Highlights] IS NULL;');
+    EXEC('UPDATE [Courses] SET [Lessons] = ''[]'' WHERE [Lessons] IS NULL;');
 END;");
                 _isSqlServerConnected = true;
             }
@@ -173,6 +198,43 @@ END;");
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "UserStates sync: {Message}", ex.Message);
+            }
+
+            // User Accounts seed
+            try
+            {
+                if (!await context.Users.AnyAsync())
+                {
+                    var adminUser = new UserAccountEntity
+                    {
+                        Id = "usr-admin-1",
+                        Username = "Hafiz Hasnain Jaani",
+                        Email = "admin@hafizhasnainjaani.com",
+                        PasswordHash = HashPassword("Admin@1234"),
+                        IsAdmin = true,
+                        EnrolledCourseIds = ["course-1", "course-2", "course-3"],
+                        CreatedAt = DateTime.UtcNow.AddMonths(-3),
+                        LastLoginAt = DateTime.UtcNow
+                    };
+                    var studentUser = new UserAccountEntity
+                    {
+                        Id = "usr-student-1",
+                        Username = "Talib-e-Ilm",
+                        Email = "student@hafizhasnainjaani.com",
+                        PasswordHash = HashPassword("Student@1234"),
+                        IsAdmin = false,
+                        EnrolledCourseIds = ["course-1"],
+                        CreatedAt = DateTime.UtcNow.AddDays(-10),
+                        LastLoginAt = DateTime.UtcNow.AddHours(-3)
+                    };
+                    await context.Users.AddRangeAsync(adminUser, studentUser);
+                    await context.SaveChangesAsync();
+                    _logger.LogInformation("Seeded initial admin and student accounts in database.");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Users seed: {Message}", ex.Message);
             }
         }
         catch (Exception ex)
@@ -375,6 +437,189 @@ END;");
             course.LessonsCount = course.Lessons.Count;
             await context.SaveChangesAsync();
         }
+    }
+
+    public async Task<CourseItem?> UpdateCoursePriceAsync(string courseId, UpdateCoursePriceRequest req)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IslamicAppContext>();
+        var course = await context.Courses.FirstOrDefaultAsync(c => c.Id == courseId);
+        if (course != null)
+        {
+            course.Price = req.Price;
+            if (req.OriginalPrice.HasValue) course.OriginalPrice = req.OriginalPrice.Value;
+            if (req.DiscountPercent.HasValue) course.DiscountPercent = req.DiscountPercent.Value;
+            course.Badge = req.Price == 0 ? "FREE" : "COURSE";
+            await context.SaveChangesAsync();
+            return course;
+        }
+        return null;
+    }
+
+    // ---------------------------------------------------------------------------
+    // Authentication & User Management
+    // ---------------------------------------------------------------------------
+    public static string HashPassword(string password)
+    {
+        using var sha256 = System.Security.Cryptography.SHA256.Create();
+        var bytes = System.Text.Encoding.UTF8.GetBytes(password + "_IslamicAppSecretSalt2026");
+        var hash = sha256.ComputeHash(bytes);
+        return Convert.ToBase64String(hash);
+    }
+
+    public async Task<AuthResponse> RegisterUserAsync(RegisterRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Username) || request.Username.Trim().Length < 2)
+            return new AuthResponse { Success = false, Message = "Username must be at least 2 characters long." };
+
+        if (string.IsNullOrWhiteSpace(request.Email) || !request.Email.Contains('@'))
+            return new AuthResponse { Success = false, Message = "Please provide a valid email address." };
+
+        if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < 8)
+            return new AuthResponse { Success = false, Message = "Password must be at least 8 characters long." };
+
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IslamicAppContext>();
+
+        var queryEmail = request.Email.Trim().ToLower();
+        var queryUsername = request.Username.Trim().ToLower();
+        var existing = await context.Users.FirstOrDefaultAsync(u => 
+            u.Email.ToLower() == queryEmail || u.Username.ToLower() == queryUsername);
+
+        if (existing != null)
+        {
+            if (existing.Email.ToLower() == queryEmail)
+                return new AuthResponse { Success = false, Message = "An account with this email address already exists." };
+            return new AuthResponse { Success = false, Message = "This username is already taken. Please choose another." };
+        }
+
+        var isFirstUser = !await context.Users.AnyAsync();
+        var user = new UserAccountEntity
+        {
+            Id = "usr-" + Guid.NewGuid().ToString("N")[..12],
+            Username = request.Username.Trim(),
+            Email = queryEmail,
+            PasswordHash = HashPassword(request.Password),
+            IsAdmin = isFirstUser || queryEmail.Contains("admin"),
+            EnrolledCourseIds = [],
+            CreatedAt = DateTime.UtcNow,
+            LastLoginAt = DateTime.UtcNow
+        };
+
+        await context.Users.AddAsync(user);
+        await context.SaveChangesAsync();
+
+        return new AuthResponse
+        {
+            Success = true,
+            Message = "Account registered successfully!",
+            User = new UserDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                IsAdmin = user.IsAdmin,
+                EnrolledCourseIds = user.EnrolledCourseIds,
+                CreatedAt = user.CreatedAt,
+                LastLoginAt = user.LastLoginAt
+            }
+        };
+    }
+
+    public async Task<AuthResponse> LoginUserAsync(LoginRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.EmailOrUsername) || string.IsNullOrWhiteSpace(request.Password))
+            return new AuthResponse { Success = false, Message = "Please provide your email/username and password." };
+
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IslamicAppContext>();
+
+        var query = request.EmailOrUsername.Trim().ToLower();
+        var user = await context.Users.FirstOrDefaultAsync(u => 
+            u.Email.ToLower() == query || u.Username.ToLower() == query);
+
+        if (user == null)
+            return new AuthResponse { Success = false, Message = "No account found with this email or username." };
+
+        var hash = HashPassword(request.Password);
+        if (user.PasswordHash != hash)
+            return new AuthResponse { Success = false, Message = "Incorrect password. Please try again." };
+
+        user.LastLoginAt = DateTime.UtcNow;
+        await context.SaveChangesAsync();
+
+        return new AuthResponse
+        {
+            Success = true,
+            Message = "Welcome back, " + user.Username + "!",
+            User = new UserDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                IsAdmin = user.IsAdmin,
+                EnrolledCourseIds = user.EnrolledCourseIds,
+                CreatedAt = user.CreatedAt,
+                LastLoginAt = user.LastLoginAt
+            }
+        };
+    }
+
+    public async Task<List<UserDto>> GetAllUsersAsync()
+    {
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<IslamicAppContext>();
+            var users = await context.Users.OrderByDescending(u => u.CreatedAt).ToListAsync();
+            return users.Select(u => new UserDto
+            {
+                Id = u.Id,
+                Username = u.Username,
+                Email = u.Email,
+                IsAdmin = u.IsAdmin,
+                EnrolledCourseIds = u.EnrolledCourseIds,
+                CreatedAt = u.CreatedAt,
+                LastLoginAt = u.LastLoginAt
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to fetch users: {Message}", ex.Message);
+            return [];
+        }
+    }
+
+    public async Task<AuthResponse> EnrollCourseAsync(string userId, string courseId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IslamicAppContext>();
+
+        var user = await context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+        if (user == null)
+            return new AuthResponse { Success = false, Message = "User not found." };
+
+        if (!user.EnrolledCourseIds.Contains(courseId))
+        {
+            user.EnrolledCourseIds.Add(courseId);
+            await context.SaveChangesAsync();
+        }
+
+        return new AuthResponse
+        {
+            Success = true,
+            Message = "Course successfully unlocked and enrolled!",
+            User = new UserDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                IsAdmin = user.IsAdmin,
+                EnrolledCourseIds = user.EnrolledCourseIds,
+                CreatedAt = user.CreatedAt,
+                LastLoginAt = user.LastLoginAt
+            }
+        };
     }
 
     // Quotes

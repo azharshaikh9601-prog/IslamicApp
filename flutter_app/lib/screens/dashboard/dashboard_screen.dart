@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
 import '../../services/storage_service.dart';
@@ -17,6 +18,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _broadcastController.text = 'Hafiz Hasnain Jaani Official Islamic App';
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AppStateService().loadAdminUsers();
+    });
   }
 
   @override
@@ -77,6 +81,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
               // 5. Inquiries & WhatsApp Inbox
               _buildInquiriesInbox(),
+
+              const SizedBox(height: 20),
+
+              // 6. Registered Users Management (Live from Database)
+              _buildRegisteredUsersSection(appState),
             ],
           ),
         );
@@ -465,6 +474,217 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRegisteredUsersSection(AppStateService appState) {
+    final users = appState.adminUsers;
+    final dateFormat = DateFormat('dd MMM yyyy, hh:mm a');
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.darkCard,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.borderEmerald),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryGold.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.people_alt, color: AppColors.primaryGold, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Registered Users & Accounts',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'Total Users in Database: ${users.length}',
+                        style: const TextStyle(
+                          color: AppColors.darkTextMuted,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              IconButton(
+                icon: const Icon(Icons.refresh, color: AppColors.primaryGold),
+                tooltip: 'Refresh Users List',
+                onPressed: () => appState.loadAdminUsers(),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+          const Divider(color: AppColors.borderEmerald, height: 1),
+          const SizedBox(height: 14),
+
+          if (users.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Column(
+                  children: [
+                    const Icon(Icons.group_off, color: Colors.white38, size: 36),
+                    const SizedBox(height: 8),
+                    const Text('No users loaded yet', style: TextStyle(color: Colors.white70)),
+                    const SizedBox(height: 10),
+                    ElevatedButton(
+                      onPressed: () => appState.loadAdminUsers(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryGold,
+                        foregroundColor: AppColors.darkEmerald,
+                      ),
+                      child: const Text('Fetch Users from Server'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: users.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                final u = users[index];
+                final initial = u.username.isNotEmpty ? u.username[0].toUpperCase() : 'U';
+
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF031E16),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: u.isAdmin ? AppColors.primaryGold.withOpacity(0.5) : AppColors.borderEmerald,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 18,
+                            backgroundColor: u.isAdmin
+                                ? AppColors.primaryGold.withOpacity(0.2)
+                                : const Color(0xFF10B981).withOpacity(0.2),
+                            child: Text(
+                              initial,
+                              style: TextStyle(
+                                color: u.isAdmin ? AppColors.primaryGold : const Color(0xFF34D399),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        u.username,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: u.isAdmin
+                                            ? AppColors.primaryGold.withOpacity(0.2)
+                                            : const Color(0xFF10B981).withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(
+                                          color: u.isAdmin ? AppColors.primaryGold : const Color(0xFF10B981),
+                                          width: 0.8,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        u.isAdmin ? 'ADMIN' : 'STUDENT',
+                                        style: TextStyle(
+                                          color: u.isAdmin ? AppColors.primaryGold : const Color(0xFF34D399),
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  u.email,
+                                  style: const TextStyle(
+                                    color: AppColors.darkTextSecondary,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const Divider(color: Color(0xFF073024), height: 1),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.school, size: 13, color: AppColors.lightGold),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Enrolled: ${u.enrolledCourseIds.length} Courses',
+                                style: const TextStyle(color: AppColors.lightGold, fontSize: 10.5),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            u.lastLoginAt != null
+                                ? 'Last Active: ${dateFormat.format(u.lastLoginAt!.toLocal())}'
+                                : 'Registered: ${dateFormat.format(u.createdAt.toLocal())}',
+                            style: const TextStyle(color: AppColors.darkTextMuted, fontSize: 10),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
         ],
       ),
     );

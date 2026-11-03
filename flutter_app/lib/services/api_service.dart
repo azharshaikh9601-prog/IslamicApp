@@ -8,6 +8,7 @@ import '../models/course_model.dart';
 import '../models/quote_model.dart';
 import '../models/dhikr_model.dart';
 import '../models/prayer_location_model.dart';
+import '../models/user_model.dart';
 
 class ApiService {
   // Local development backend URL
@@ -417,6 +418,106 @@ class ApiService {
     } catch (_) {
       return false;
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Course Price & Enrollment
+  // ---------------------------------------------------------------------------
+  Future<bool> updateCoursePrice(
+    String courseId, {
+    required int price,
+    int? originalPrice,
+    int? discountPercent,
+  }) async {
+    try {
+      final res = await http.put(
+        Uri.parse('$baseUrl/courses/$courseId/price'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'price': price,
+          'originalPrice': originalPrice ?? price,
+          'discountPercent': discountPercent ?? 0,
+        }),
+      ).timeout(const Duration(seconds: 4));
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<Map<String, dynamic>?> enrollInCourse(String courseId, String userId) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/courses/$courseId/enroll'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'courseId': courseId,
+          'userId': userId,
+        }),
+      ).timeout(const Duration(seconds: 4));
+      if (res.statusCode == 200) {
+        return jsonDecode(utf8.decode(res.bodyBytes));
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Authentication & Users
+  // ---------------------------------------------------------------------------
+  Future<Map<String, dynamic>> register({
+    required String username,
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/auth/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'username': username,
+          'email': email,
+          'password': password,
+        }),
+      ).timeout(const Duration(seconds: 5));
+      final data = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+      return data;
+    } catch (e) {
+      return {'success': false, 'message': 'Network error. Please ensure backend is running.'};
+    }
+  }
+
+  Future<Map<String, dynamic>> login({
+    required String emailOrUsername,
+    required String password,
+  }) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'emailOrUsername': emailOrUsername,
+          'password': password,
+        }),
+      ).timeout(const Duration(seconds: 5));
+      final data = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+      return data;
+    } catch (e) {
+      return {'success': false, 'message': 'Network error. Please ensure backend is running.'};
+    }
+  }
+
+  Future<List<UserModel>> fetchAdminUsers() async {
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/admin/users'),
+      ).timeout(const Duration(seconds: 5));
+      if (res.statusCode == 200) {
+        final List list = jsonDecode(utf8.decode(res.bodyBytes));
+        return list.map((j) => UserModel.fromJson(j)).toList();
+      }
+    } catch (_) {}
+    return [];
   }
 }
 

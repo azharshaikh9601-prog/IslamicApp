@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
+import '../models/user_model.dart';
+import '../services/storage_service.dart';
+import 'auth/auth_modal.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final int currentTabIndex;
@@ -133,15 +136,24 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
 
               const SizedBox(width: 6),
 
-              // Right Actions: User Profile Chip [HJ] Hafiz ⌄ (as in Screenshot)
+              // Right Actions: User Profile Chip
               GestureDetector(
-                onTap: onAdminTap ?? () => onTabSelected(5),
+                onTap: () {
+                  final appState = AppStateService();
+                  if (!appState.isLoggedIn) {
+                    AuthModal.show(context);
+                  } else {
+                    _showUserMenu(context, appState.currentUser!, appState);
+                  }
+                },
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: const Color(0xFF0C241C),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.borderEmerald),
+                    border: Border.all(
+                      color: AppStateService().isLoggedIn ? AppColors.primaryGold : AppColors.borderEmerald,
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -149,14 +161,16 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                       Container(
                         width: 22,
                         height: 22,
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: AppColors.primaryGold,
+                          color: AppStateService().isLoggedIn ? AppColors.primaryGold : Colors.white24,
                         ),
-                        child: const Center(
+                        child: Center(
                           child: Text(
-                            'HJ',
-                            style: TextStyle(
+                            AppStateService().isLoggedIn && AppStateService().currentUser!.username.isNotEmpty
+                                ? AppStateService().currentUser!.username[0].toUpperCase()
+                                : '?',
+                            style: const TextStyle(
                               color: Color(0xFF032B1F),
                               fontSize: 9,
                               fontWeight: FontWeight.bold,
@@ -165,9 +179,11 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                         ),
                       ),
                       const SizedBox(width: 6),
-                      const Text(
-                        'Hafiz',
-                        style: TextStyle(
+                      Text(
+                        AppStateService().isLoggedIn
+                            ? AppStateService().currentUser!.username
+                            : 'Sign In',
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
@@ -181,6 +197,108 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showUserMenu(BuildContext context, UserModel user, AppStateService appState) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFF041E16),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          border: Border.all(color: AppColors.primaryGold.withOpacity(0.5)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: AppColors.primaryGold,
+                  child: Text(
+                    user.username.isNotEmpty ? user.username[0].toUpperCase() : 'U',
+                    style: const TextStyle(color: Color(0xFF032B1F), fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              user.username,
+                              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: user.isAdmin ? AppColors.primaryGold.withOpacity(0.2) : const Color(0xFF10B981).withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: user.isAdmin ? AppColors.primaryGold : const Color(0xFF10B981), width: 0.8),
+                            ),
+                            child: Text(
+                              user.isAdmin ? 'ADMIN' : 'STUDENT',
+                              style: TextStyle(
+                                color: user.isAdmin ? AppColors.primaryGold : const Color(0xFF34D399),
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(user.email, style: const TextStyle(color: AppColors.darkTextSecondary, fontSize: 12)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(color: AppColors.borderEmerald),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.school, color: AppColors.primaryGold),
+              title: const Text('Enrolled Courses', style: TextStyle(color: Colors.white, fontSize: 13)),
+              trailing: Text('${user.enrolledCourseIds.length}', style: const TextStyle(color: AppColors.brightGold, fontWeight: FontWeight.bold)),
+              contentPadding: EdgeInsets.zero,
+            ),
+            if (user.isAdmin && onAdminTap != null)
+              ListTile(
+                leading: const Icon(Icons.dashboard_customize, color: AppColors.primaryGold),
+                title: const Text('Open Admin Dashboard', style: TextStyle(color: Colors.white, fontSize: 13)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  onAdminTap?.call();
+                },
+                contentPadding: EdgeInsets.zero,
+              ),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.redAccent),
+              title: const Text('Sign Out (لاگ آؤٹ)', style: TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.bold)),
+              onTap: () {
+                Navigator.pop(ctx);
+                appState.signOut();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Successfully signed out.'), backgroundColor: AppColors.darkEmerald),
+                );
+              },
+              contentPadding: EdgeInsets.zero,
+            ),
+          ],
         ),
       ),
     );

@@ -59,75 +59,14 @@ app.MapGet("/api/health", (SqlDatabaseService db) => Results.Ok(new
 }));
 
 // ---------------------------------------------------------------------------
-// In-App Video & Shorts Player Embed (Fixes YouTube Error 153 with valid HTTP Referrer)
+// In-App Video & Shorts Player Embed
 // ---------------------------------------------------------------------------
-app.MapGet("/api/player", (HttpContext httpContext, string? v, bool? isShort) =>
+app.MapGet("/api/player", (string? v, bool? isShort) =>
 {
     var videoId = v ?? "";
     var isShortVideo = isShort == true;
-    var loopParam = isShortVideo ? $"&loop=1&playlist={videoId}" : "";
-    
-    httpContext.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
-    httpContext.Response.Headers.Append("Access-Control-Allow-Origin", "*");
-
-    var html = $@"<!DOCTYPE html>
-<html>
-<head>
-  <meta charset=""utf-8"">
-  <meta name=""viewport"" content=""width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"">
-  <meta name=""referrer"" content=""strict-origin-when-cross-origin"">
-  <style>
-    * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-    html, body {{
-      width: 100%;
-      height: 100%;
-      background-color: #000000;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }}
-    #player, iframe {{
-      width: 100%;
-      height: 100%;
-      border: 0;
-    }}
-  </style>
-</head>
-<body>
-  <div id=""player""></div>
-  <script>
-    var tag = document.createElement('script');
-    tag.src = ""https://www.youtube.com/iframe_api"";
-    var firstScriptTag = document.getElementsByTagName('script')[0];
-    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
-    var player;
-    function onYouTubeIframeAPIReady() {{
-      player = new YT.Player('player', {{
-        height: '100%',
-        width: '100%',
-        videoId: '{videoId}',
-        playerVars: {{
-          'autoplay': 1,
-          'playsinline': 1,
-          'controls': {(isShortVideo ? 0 : 1)},
-          'rel': 0,
-          'modestbranding': 1,
-          {(isShortVideo ? $"'loop': 1, 'playlist': '{videoId}'," : "")}
-          'origin': 'http://localhost:5000'
-        }},
-        events: {{
-          'onReady': function(event) {{
-            {(isShortVideo ? "event.target.playVideo();" : "")}
-          }}
-        }}
-      }});
-    }}
-  </script>
-</body>
-</html>";
-    return Results.Content(html, "text/html");
+    var loopParam = isShortVideo ? $"&loop=1&playlist={videoId}&controls=0" : "&controls=1";
+    return Results.Redirect($"https://www.youtube.com/embed/{videoId}?autoplay=1&rel=0&playsinline=1{loopParam}");
 });
 
 // ---------------------------------------------------------------------------
@@ -216,6 +155,35 @@ app.MapPost("/api/courses/{id}/lessons", async (SqlDatabaseService db, string id
     var course = await db.GetCourseByIdAsync(id);
     return course is not null ? Results.Ok(course) : Results.NotFound();
 });
+
+app.MapPut("/api/courses/{id}/price", async (SqlDatabaseService db, string id, UpdateCoursePriceRequest req) =>
+{
+    var updated = await db.UpdateCoursePriceAsync(id, req);
+    return updated is not null ? Results.Ok(updated) : Results.NotFound();
+});
+
+app.MapPost("/api/courses/{id}/enroll", async (SqlDatabaseService db, string id, EnrollCourseRequest req) =>
+{
+    var res = await db.EnrollCourseAsync(req.UserId, id);
+    return res.Success ? Results.Ok(res) : Results.BadRequest(res);
+});
+
+// ---------------------------------------------------------------------------
+// Authentication & User Accounts API
+// ---------------------------------------------------------------------------
+app.MapPost("/api/auth/register", async (SqlDatabaseService db, RegisterRequest req) =>
+{
+    var res = await db.RegisterUserAsync(req);
+    return res.Success ? Results.Ok(res) : Results.BadRequest(res);
+});
+
+app.MapPost("/api/auth/login", async (SqlDatabaseService db, LoginRequest req) =>
+{
+    var res = await db.LoginUserAsync(req);
+    return res.Success ? Results.Ok(res) : Results.BadRequest(res);
+});
+
+app.MapGet("/api/admin/users", async (SqlDatabaseService db) => Results.Ok(await db.GetAllUsersAsync()));
 
 // ---------------------------------------------------------------------------
 // Quotes API

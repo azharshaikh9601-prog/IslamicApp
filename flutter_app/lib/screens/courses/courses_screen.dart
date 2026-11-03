@@ -5,6 +5,7 @@ import '../../models/course_model.dart';
 import '../../models/video_model.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/video_player/in_app_player_modal.dart';
+import '../../widgets/auth/auth_modal.dart';
 
 class CoursesScreen extends StatefulWidget {
   const CoursesScreen({super.key});
@@ -16,7 +17,12 @@ class CoursesScreen extends StatefulWidget {
 class _CoursesScreenState extends State<CoursesScreen> {
   String _selectedCategory = 'all';
 
-  void _playLessonInApp(BuildContext context, CourseLesson lesson, CourseModel course) {
+  void _playLessonInApp(BuildContext context, CourseLesson lesson, CourseModel course, AppStateService appState) {
+    if (!appState.isCourseUnlocked(course)) {
+      _showEnrollDialog(context, course, appState);
+      return;
+    }
+
     final video = VideoModel(
       id: 'course-${lesson.id}',
       youtubeId: lesson.youtubeId,
@@ -32,6 +38,177 @@ class _CoursesScreenState extends State<CoursesScreen> {
     InAppPlayerModal.show(
       context,
       video: video,
+    );
+  }
+
+  void _showEditPriceDialog(BuildContext context, CourseModel course, AppStateService appState) {
+    final priceCtrl = TextEditingController(text: course.price.toString());
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.darkEmerald,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: AppColors.primaryGold, width: 1.5),
+        ),
+        title: Row(
+          children: const [
+            Icon(Icons.edit_note, color: AppColors.primaryGold),
+            SizedBox(width: 8),
+            Text(
+              'Admin: Set Course Amount',
+              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Course: ${course.title}',
+              style: const TextStyle(color: AppColors.lightGold, fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: priceCtrl,
+              keyboardType: TextInputType.number,
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+              decoration: const InputDecoration(
+                labelText: 'Course Amount (in ₹, 0 for Free)',
+                hintText: 'e.g. 499 or 0',
+                labelStyle: TextStyle(color: AppColors.lightGold),
+                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.borderEmerald)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newFee = int.tryParse(priceCtrl.text.trim()) ?? course.price;
+              await appState.updateCoursePrice(course.id, newFee);
+              if (ctx.mounted) Navigator.pop(ctx);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('✓ Course amount updated to ₹$newFee!'),
+                    backgroundColor: AppColors.darkEmerald,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGold,
+              foregroundColor: AppColors.darkEmerald,
+            ),
+            child: const Text('Save Amount', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEnrollDialog(BuildContext context, CourseModel course, AppStateService appState) {
+    if (!appState.isLoggedIn) {
+      AuthModal.show(context, onSuccess: () {
+        _showEnrollDialog(context, course, appState);
+      });
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF041E16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: AppColors.primaryGold, width: 1.5),
+        ),
+        title: Row(
+          children: const [
+            Icon(Icons.lock_open, color: AppColors.primaryGold),
+            SizedBox(width: 8),
+            Text(
+              'Unlock Full Course',
+              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              course.title,
+              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Instructor: ${course.instructor}',
+              style: const TextStyle(color: AppColors.lightGold, fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF072B20),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.borderEmerald),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Access Fee:', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  Text(
+                    '₹${course.price}',
+                    style: const TextStyle(color: AppColors.brightGold, fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Enrolling will unlock all ${course.lessons.length} video classes permanently for account "${appState.currentUser?.username}".',
+              style: const TextStyle(color: AppColors.darkTextMuted, fontSize: 11.5, height: 1.3),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final res = await appState.enrollInCourse(course.id);
+              if (ctx.mounted) Navigator.pop(ctx);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(res['message'] ?? 'Course successfully unlocked!'),
+                    backgroundColor: res['success'] == true ? AppColors.darkEmerald : Colors.redAccent,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGold,
+              foregroundColor: AppColors.darkEmerald,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            ),
+            child: Text(
+              'Enroll & Pay ₹${course.price}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -504,6 +681,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
 
   Widget _buildCourseCard(BuildContext context, CourseModel course, AppStateService appState) {
     final isFree = course.price == 0;
+    final isUnlocked = appState.isCourseUnlocked(course);
 
     return Container(
       decoration: BoxDecoration(
@@ -531,23 +709,37 @@ class _CoursesScreenState extends State<CoursesScreen> {
                   ),
                 ),
               ),
-              // Fee Badge (FREE or Custom Fee)
+              // Fee Badge (FREE or Custom Fee or UNLOCKED)
               Positioned(
                 top: 10,
                 left: 10,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: isFree ? const Color(0xFF10B981) : AppColors.primaryGold,
+                    color: isFree
+                        ? const Color(0xFF10B981)
+                        : (isUnlocked ? const Color(0xFF047857) : AppColors.primaryGold),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: Text(
-                    isFree ? 'FREE ACCESS' : '₹${course.price}',
-                    style: const TextStyle(
-                      color: Color(0xFF032B1F),
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w900,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (!isFree && !isUnlocked)
+                        const Padding(
+                          padding: EdgeInsets.only(right: 4),
+                          child: Icon(Icons.lock, size: 10, color: Color(0xFF032B1F)),
+                        ),
+                      Text(
+                        isFree
+                            ? 'FREE ACCESS'
+                            : (isUnlocked ? '✓ UNLOCKED' : '₹${course.price}'),
+                        style: TextStyle(
+                          color: isUnlocked && !isFree ? Colors.white : const Color(0xFF032B1F),
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -612,28 +804,64 @@ class _CoursesScreenState extends State<CoursesScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // Pricing Row (Real, no fake discounts or fake prices)
+                // Pricing Row & Admin Controls
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      isFree ? 'Free for Ummah' : 'Fee: ₹${course.price}',
-                      style: TextStyle(
-                        color: isFree ? const Color(0xFF34D399) : Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    // Admin add lesson button
-                    if (appState.isAdmin)
-                      TextButton.icon(
-                        onPressed: () => _showAddLessonDialog(context, course, appState),
-                        icon: const Icon(Icons.add, size: 14, color: AppColors.primaryGold),
-                        label: const Text(
-                          '+ Add Lesson',
-                          style: TextStyle(color: AppColors.primaryGold, fontSize: 11.5, fontWeight: FontWeight.bold),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isFree
+                              ? 'Free for Ummah'
+                              : (isUnlocked ? '✓ Enrolled (₹${course.price})' : 'Fee: ₹${course.price}'),
+                          style: TextStyle(
+                            color: isFree
+                                ? const Color(0xFF34D399)
+                                : (isUnlocked ? AppColors.brightGold : Colors.white),
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
+                        if (!isUnlocked && !isFree)
+                          const Text(
+                            'Paid Course • Unlock to access',
+                            style: TextStyle(color: AppColors.lightGold, fontSize: 10),
+                          ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        if (!isUnlocked && !isFree)
+                          ElevatedButton.icon(
+                            onPressed: () => _showEnrollDialog(context, course, appState),
+                            icon: const Icon(Icons.lock_open, size: 14),
+                            label: Text('Enroll (₹${course.price})'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryGold,
+                              foregroundColor: AppColors.darkEmerald,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+                            ),
+                          ),
+                        if (appState.isAdmin) ...[
+                          const SizedBox(width: 4),
+                          IconButton(
+                            onPressed: () => _showEditPriceDialog(context, course, appState),
+                            icon: const Icon(Icons.edit, size: 16, color: AppColors.primaryGold),
+                            tooltip: 'Admin: Edit Fee Amount',
+                          ),
+                          TextButton.icon(
+                            onPressed: () => _showAddLessonDialog(context, course, appState),
+                            icon: const Icon(Icons.add, size: 14, color: AppColors.primaryGold),
+                            label: const Text(
+                              '+ Lesson',
+                              style: TextStyle(color: AppColors.primaryGold, fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ],
                 ),
 
@@ -646,7 +874,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                     (lesson) => Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: InkWell(
-                        onTap: () => _playLessonInApp(context, lesson, course),
+                        onTap: () => _playLessonInApp(context, lesson, course, appState),
                         borderRadius: BorderRadius.circular(8),
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -657,21 +885,43 @@ class _CoursesScreenState extends State<CoursesScreen> {
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.play_circle_fill, color: AppColors.brightGold, size: 20),
+                              Icon(
+                                isUnlocked ? Icons.play_circle_fill : Icons.lock_outline,
+                                color: isUnlocked ? AppColors.brightGold : Colors.white38,
+                                size: 20,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   lesson.title,
-                                  style: const TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.w600),
+                                  style: TextStyle(
+                                    color: isUnlocked ? Colors.white : Colors.white70,
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               const SizedBox(width: 6),
-                              Text(
-                                lesson.duration,
-                                style: const TextStyle(color: AppColors.lightGold, fontSize: 10.5),
-                              ),
+                              if (!isUnlocked)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: Colors.redAccent.withOpacity(0.4)),
+                                  ),
+                                  child: const Text(
+                                    'LOCKED',
+                                    style: TextStyle(color: Colors.redAccent, fontSize: 9, fontWeight: FontWeight.bold),
+                                  ),
+                                )
+                              else
+                                Text(
+                                  lesson.duration,
+                                  style: const TextStyle(color: AppColors.lightGold, fontSize: 10.5),
+                                ),
                             ],
                           ),
                         ),

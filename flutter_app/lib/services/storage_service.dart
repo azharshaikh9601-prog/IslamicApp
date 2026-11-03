@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import '../models/video_model.dart';
 import '../models/reel_model.dart';
@@ -5,6 +7,7 @@ import '../models/quote_model.dart';
 import '../models/dhikr_model.dart';
 import '../models/playlist_model.dart';
 import '../models/course_model.dart';
+import '../models/user_model.dart';
 import '../data/initial_data.dart';
 import 'api_service.dart';
 
@@ -12,6 +15,7 @@ class AppStateService extends ChangeNotifier {
   static final AppStateService _instance = AppStateService._internal();
   factory AppStateService() => _instance;
   AppStateService._internal() {
+    _restoreUserSession();
     loadFromBackend();
   }
 
@@ -19,13 +23,159 @@ class AppStateService extends ChangeNotifier {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
-  // Admin Mode
+  // ---------------------------------------------------------------------------
+  // User Authentication & Profile
+  // ---------------------------------------------------------------------------
+  UserModel? _currentUser;
+  UserModel? get currentUser => _currentUser;
+  bool get isLoggedIn => _currentUser != null;
+
+  // Admin Mode (True if logged in user is admin, or default true for scholar app administration)
   bool _isAdmin = true;
-  bool get isAdmin => _isAdmin;
+  bool get isAdmin => _currentUser != null ? _currentUser!.isAdmin : _isAdmin;
 
   void setAdminMode(bool value) {
     _isAdmin = value;
     notifyListeners();
+  }
+
+  File _getSessionFile() {
+    return File('user_session.json');
+  }
+
+  Future<void> _restoreUserSession() async {
+    try {
+      final file = _getSessionFile();
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        final json = jsonDecode(content);
+        _currentUser = UserModel.fromJson(json);
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _saveUserSession() async {
+    try {
+      final file = _getSessionFile();
+      if (_currentUser != null) {
+        await file.writeAsString(jsonEncode(_currentUser!.toJson()));
+      } else {
+        if (await file.exists()) await file.delete();
+      }
+    } catch (_) {}
+  }
+
+  Future<Map<String, dynamic>> register({
+    required String username,
+    required String email,
+    required String password,
+  }) async {
+    final res = await _api.register(
+      username: username,
+      email: email,
+      password: password,
+    );
+    if (res['success'] == true && res['user'] != null) {
+      _currentUser = UserModel.fromJson(res['user']);
+      await _saveUserSession();
+      notifyListeners();
+    }
+    return res;
+  }
+
+  Future<Map<String, dynamic>> login({
+    required String emailOrUsername,
+    required String password,
+  }) async {
+    final res = await _api.login(
+      emailOrUsername: emailOrUsername,
+      password: password,
+    );
+    if (res['success'] == true && res['user'] != null) {
+      _currentUser = UserModel.fromJson(res['user']);
+      await _saveUserSession();
+      notifyListeners();
+    }
+    return res;
+  }
+
+  void signOut() async {
+    _currentUser = null;
+    await _saveUserSession();
+    notifyListeners();
+  }
+
+  // Admin user list for dashboard
+  List<UserModel> _adminUsers = [];
+  List<UserModel> get adminUsers => _adminUsers;
+
+  Future<void> loadAdminUsers() async {
+    final users = await _api.fetchAdminUsers();
+    if (users.isNotEmpty) {
+      _adminUsers = users;
+      notifyListeners();
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Course Unlocking & Pricing
+  // ---------------------------------------------------------------------------
+  bool isCourseUnlocked(CourseModel course) {
+    if (course.price == 0) return true; // Free course
+    if (isAdmin) return true; // Admin has full access
+    if (_currentUser != null && _currentUser!.enrolledCourseIds.contains(course.id)) {
+      return true; // Enrolled / Paid
+    }
+    return false;
+  }
+
+  Future<bool> updateCoursePrice(String courseId, int newPrice) async {
+    final idx = _courses.indexWhere((c) => c.id == courseId);
+    if (idx >= 0) {
+      final old = _courses[idx];
+      _courses[idx] = CourseModel(
+        id: old.id,
+        title: old.title,
+        urduTitle: old.urduTitle,
+        category: old.category,
+        price: newPrice,
+        originalPrice: old.originalPrice,
+        discountPercent: old.discountPercent,
+        duration: old.duration,
+        lessonsCount: old.lessonsCount,
+        badge: newPrice == 0 ? 'FREE' : 'COURSE',
+        instructor: old.instructor,
+        rating: old.rating,
+        studentsEnrolled: old.studentsEnrolled,
+        thumbnail: old.thumbnail,
+        description: old.description,
+        highlights: old.highlights,
+        lessons: old.lessons,
+      );
+      notifyListeners();
+      return await _api.updateCoursePrice(courseId, price: newPrice);
+    }
+    return false;
+  }
+
+  Future<Map<String, dynamic>> enrollInCourse(String courseId) async {
+    if (_currentUser == null) {
+      return {'success': false, 'message': 'Please sign in or create an account to enroll.'};
+    }
+
+    final res = await _api.enrollInCourse(courseId, _currentUser!.id);
+    if (res != null && res['success'] == true) {
+      final updatedEnrolled = List<String>.from(_currentUser!.enrolledCourseIds);
+      if (!updatedEnrolled.contains(courseId)) {
+        updatedEnrolled.add(courseId);
+      }
+      _currentUser = _currentUser!.copyWith(enrolledCourseIds: updatedEnrolled);
+      await _saveUserSession();
+      notifyListeners();
+      return {'success': true, 'message': 'Course unlocked successfully!'};
+    }
+    return {'success': false, 'message': res?['message'] ?? 'Enrollment failed.'};
   }
 
   // Playlists (Initialized with InitialData fallback so UI never shows empty while loading)
@@ -319,6 +469,8 @@ class AppStateService extends ChangeNotifier {
         if (state['selectedLocationId'] is String) _selectedLocationId = state['selectedLocationId'];
         if (state['asrFactor'] is int) _asrFactor = state['asrFactor'];
       }
+
+      await loadAdminUsers();
     } catch (_) {}
 
     _isLoading = false;

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:webview_windows/webview_windows.dart';
 import '../../core/theme/app_colors.dart';
-import '../../services/in_app_player_server.dart';
 
 Widget buildInAppVideoPlayer({
   Key? key,
@@ -60,14 +59,11 @@ class _WindowsInAppVideoPlayerState extends State<WindowsInAppVideoPlayer> {
 
   Future<void> _loadCurrentVideo() async {
     try {
-      await InAppPlayerServer().ensureStarted();
-      final playerUrl = InAppPlayerServer().getUrlForVideo(widget.youtubeId, isShort: false);
-      await _controller.loadUrl(playerUrl);
-    } catch (_) {
-      try {
-        await _controller.loadStringContent(
-            _buildEmbedHtml(widget.youtubeId, isShort: false));
-      } catch (_) {}
+      final embedUrl =
+          'https://www.youtube.com/embed/${widget.youtubeId}?autoplay=1&controls=1&rel=0&playsinline=1';
+      await _controller.loadUrl(embedUrl);
+    } catch (e) {
+      debugPrint('[InAppVideoPlayer] Error loading video: $e');
     }
   }
 
@@ -88,59 +84,6 @@ class _WindowsInAppVideoPlayerState extends State<WindowsInAppVideoPlayer> {
         _hasError = true;
       });
     }
-  }
-
-  static String _buildEmbedHtml(String videoId, {required bool isShort}) {
-    return '''<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="referrer" content="strict-origin-when-cross-origin">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body {
-      width: 100%; height: 100%;
-      background-color: #000;
-      overflow: hidden;
-      display: flex; align-items: center; justify-content: center;
-    }
-    #player, iframe { width: 100%; height: 100%; border: 0; }
-  </style>
-</head>
-<body>
-  <div id="player"></div>
-  <script>
-    var tag = document.createElement('script');
-    tag.src = "https://www.youtube.com/iframe_api";
-    var firstScriptTag = document.getElementsByTagName('script')[0];
-    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
-    var player;
-    function onYouTubeIframeAPIReady() {
-      player = new YT.Player('player', {
-        height: '100%',
-        width: '100%',
-        videoId: '$videoId',
-        playerVars: {
-          'autoplay': 1,
-          'playsinline': 1,
-          'controls': ${isShort ? 0 : 1},
-          'rel': 0,
-          'modestbranding': 1,
-          ${isShort ? "'loop': 1, 'playlist': '$videoId'," : ""}
-          'origin': 'https://www.youtube.com'
-        },
-        events: {
-          'onReady': function(event) {
-            ${isShort ? "event.target.playVideo();" : ""}
-          }
-        }
-      });
-    }
-  </script>
-</body>
-</html>''';
   }
 
   @override

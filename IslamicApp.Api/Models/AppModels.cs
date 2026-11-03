@@ -158,6 +158,64 @@ public class AppData
     public List<PrayerLocationItem> PrayerLocations { get; set; } = [];
     public UserInteractionState UserState { get; set; } = new();
     public List<MasalaInquiry> MasalaInquiries { get; set; } = [];
+    public List<UserAccountEntity> Users { get; set; } = [];
 }
+
+public class UserAccountEntity
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string Username { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string PasswordHash { get; set; } = string.Empty;
+    public bool IsAdmin { get; set; } = false;
+    public List<string> EnrolledCourseIds { get; set; } = [];
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? LastLoginAt { get; set; } = DateTime.UtcNow;
+}
+
+public class RegisterRequest
+{
+    public string Username { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+}
+
+public class LoginRequest
+{
+    public string EmailOrUsername { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+}
+
+public class UserDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string Username { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public bool IsAdmin { get; set; }
+    public List<string> EnrolledCourseIds { get; set; } = [];
+    public DateTime CreatedAt { get; set; }
+    public DateTime? LastLoginAt { get; set; }
+}
+
+public class AuthResponse
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public UserDto? User { get; set; }
+}
+
+public class UpdateCoursePriceRequest
+{
+    public int Price { get; set; }
+    public int? OriginalPrice { get; set; }
+    public int? DiscountPercent { get; set; }
+}
+
+public class EnrollCourseRequest
+{
+    public string UserId { get; set; } = string.Empty;
+    public string CourseId { get; set; } = string.Empty;
+}
+
 
 

@@ -21,6 +21,7 @@ public class IslamicAppContext : DbContext
     public DbSet<PrayerLocationItem> PrayerLocations { get; set; } = null!;
     public DbSet<UserInteractionStateEntity> UserStates { get; set; } = null!;
     public DbSet<MasalaInquiry> MasalaInquiries { get; set; } = null!;
+    public DbSet<UserAccountEntity> Users { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -115,13 +116,13 @@ public class IslamicAppContext : DbContext
             entity.Property(e => e.Highlights)
                 .HasConversion(
                     v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                    v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>())
+                    v => string.IsNullOrEmpty(v) ? new List<string>() : JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>())
                 .Metadata.SetValueComparer(stringListComparer);
 
             entity.Property(e => e.Lessons)
                 .HasConversion(
                     v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                    v => JsonSerializer.Deserialize<List<CourseLessonItem>>(v, (JsonSerializerOptions?)null) ?? new List<CourseLessonItem>())
+                    v => string.IsNullOrEmpty(v) ? new List<CourseLessonItem>() : JsonSerializer.Deserialize<List<CourseLessonItem>>(v, (JsonSerializerOptions?)null) ?? new List<CourseLessonItem>())
                 .Metadata.SetValueComparer(lessonListComparer);
         });
 
@@ -198,6 +199,22 @@ public class IslamicAppContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(150);
             entity.Property(e => e.City).HasMaxLength(100);
             entity.Property(e => e.Question).HasMaxLength(2000);
+        });
+
+        // User Accounts
+        modelBuilder.Entity<UserAccountEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(100);
+            entity.Property(e => e.Username).HasMaxLength(150).IsRequired();
+            entity.Property(e => e.Email).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.PasswordHash).HasMaxLength(500).IsRequired();
+
+            entity.Property(e => e.EnrolledCourseIds)
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                    v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>())
+                .Metadata.SetValueComparer(stringListComparer);
         });
     }
 }

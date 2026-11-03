@@ -5,7 +5,6 @@ import 'package:webview_windows/webview_windows.dart';
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
 import 'screens/main_navigation_screen.dart';
-import 'services/in_app_player_server.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,9 +20,6 @@ void main() async {
       debugPrint('[WebView2] initializeEnvironment notice: $e');
     }
   }
-
-  // Start internal zero-latency player loopback server (bypasses Error 153 & ERR_CONNECTION_REFUSED)
-  await InAppPlayerServer().ensureStarted();
 
   // Set immersive system status bar and navigation bar styling
   SystemChrome.setSystemUIOverlayStyle(
