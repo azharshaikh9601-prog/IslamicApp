@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:webview_windows/webview_windows.dart';
 import '../../core/theme/app_colors.dart';
 import '../../services/api_service.dart';
+import '../../services/in_app_player_server.dart';
 
 Widget buildInAppVideoPlayer({
   Key? key,
@@ -59,13 +60,15 @@ class _WindowsInAppVideoPlayerState extends State<WindowsInAppVideoPlayer> {
   }
 
   Future<void> _loadCurrentVideo() async {
-    final playerUrl =
-        '${ApiService.baseUrl}/player?v=${widget.youtubeId}&isShort=false';
     try {
+      await InAppPlayerServer().ensureStarted();
+      final playerUrl = InAppPlayerServer().getUrlForVideo(widget.youtubeId, isShort: false);
       await _controller.loadUrl(playerUrl);
     } catch (_) {
-      await _controller.loadStringContent(
-          _buildEmbedHtml(widget.youtubeId, isShort: false));
+      try {
+        await _controller.loadStringContent(
+            _buildEmbedHtml(widget.youtubeId, isShort: false));
+      } catch (_) {}
     }
   }
 

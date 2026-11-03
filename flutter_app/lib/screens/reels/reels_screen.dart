@@ -186,7 +186,6 @@ class _ReelsScreenState extends State<ReelsScreen> {
           child: buildShortsPlayer(
             youtubeId: reel.youtubeId,
             title: reel.title,
-            onWatched: () => appState.markShortSeen(reel.id),
           ),
         ),
 
