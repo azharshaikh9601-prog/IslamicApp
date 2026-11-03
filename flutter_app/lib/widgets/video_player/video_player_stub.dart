@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:webview_windows/webview_windows.dart';
 import '../../core/theme/app_colors.dart';
+import '../../services/api_service.dart';
 
 Widget buildInAppVideoPlayer({
   Key? key,
@@ -59,9 +60,9 @@ class _WindowsInAppVideoPlayerState extends State<WindowsInAppVideoPlayer> {
 
   Future<void> _loadCurrentVideo() async {
     try {
-      final embedUrl =
-          'https://www.youtube.com/embed/${widget.youtubeId}?autoplay=1&controls=1&rel=0&playsinline=1';
-      await _controller.loadUrl(embedUrl);
+      final playerUrl =
+          '${ApiService.baseUrl}/player?v=${widget.youtubeId}&isShort=false';
+      await _controller.loadUrl(playerUrl);
     } catch (e) {
       debugPrint('[InAppVideoPlayer] Error loading video: $e');
     }

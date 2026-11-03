@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:webview_windows/webview_windows.dart';
 import '../../core/theme/app_colors.dart';
+import '../../services/api_service.dart';
 
 Widget buildShortsPlayer({
   Key? key,
@@ -80,9 +81,9 @@ class _WindowsShortsPlayerState extends State<WindowsShortsPlayer> {
 
   Future<void> _loadCurrentShort() async {
     try {
-      final embedUrl =
-          'https://www.youtube.com/embed/${widget.youtubeId}?autoplay=1&controls=0&rel=0&playsinline=1&loop=1&playlist=${widget.youtubeId}';
-      await _controller.loadUrl(embedUrl);
+      final playerUrl =
+          '${ApiService.baseUrl}/player?v=${widget.youtubeId}&isShort=true';
+      await _controller.loadUrl(playerUrl);
     } catch (e) {
       debugPrint('[ShortsPlayer] Error loading short: $e');
     }
