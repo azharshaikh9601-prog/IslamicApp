@@ -974,9 +974,13 @@ class _CoursesScreenState extends State<CoursesScreen> {
                         children: const [
                           Icon(Icons.video_library, color: AppColors.primaryGold, size: 18),
                           SizedBox(width: 8),
-                          Text(
-                            'Course Video (Upload from Device)',
-                            style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                          Expanded(
+                            child: Text(
+                              'Course Video (Upload from Device)',
+                              style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),
@@ -1277,10 +1281,14 @@ class _CoursesScreenState extends State<CoursesScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text(
-                                  'In-App Video File (.mp4):',
-                                  style: TextStyle(color: AppColors.lightGold, fontSize: 11.5, fontWeight: FontWeight.bold),
+                                const Flexible(
+                                  child: Text(
+                                    'In-App Video File (.mp4):',
+                                    style: TextStyle(color: AppColors.lightGold, fontSize: 11.5, fontWeight: FontWeight.bold),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
+                                const SizedBox(width: 6),
                                 ElevatedButton.icon(
                                   onPressed: isUploading
                                       ? null
@@ -1584,7 +1592,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                 crossAxisCount: 2,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 12,
-                childAspectRatio: 0.74,
+                childAspectRatio: 0.69,
               ),
               itemBuilder: (context, index) {
                 final course = filtered[index];
@@ -1772,7 +1780,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
 
             // Card Body (Title, Price Info & Action Button)
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+              padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -1797,7 +1805,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   // Price Row with Admin edit fee link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1824,7 +1832,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                         ),
                     ],
                   ),
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 4),
                   // Action Button (View Lessons or Enroll)
                   SizedBox(
                     width: double.infinity,
@@ -1841,9 +1849,12 @@ class _CoursesScreenState extends State<CoursesScreen> {
                         !isUnlocked && !isFree ? Icons.lock_open : Icons.play_circle_fill,
                         size: 13,
                       ),
-                      label: Text(
-                        !isUnlocked && !isFree ? 'Enroll (₹${course.price})' : 'View Lessons',
-                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                      label: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          !isUnlocked && !isFree ? 'Enroll (₹${course.price})' : 'View Lessons',
+                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: !isUnlocked && !isFree

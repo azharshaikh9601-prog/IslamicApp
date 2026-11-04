@@ -1275,7 +1275,7 @@ class _VideosScreenState extends State<VideosScreen> {
           crossAxisCount: 2,
           crossAxisSpacing: 10,
           mainAxisSpacing: 12,
-          childAspectRatio: 0.86,
+          childAspectRatio: 0.81,
         ),
         delegate: SliverChildBuilderDelegate(
           (context, index) {
@@ -1490,7 +1490,7 @@ class _VideosScreenState extends State<VideosScreen> {
           crossAxisCount: 2,
           crossAxisSpacing: 10,
           mainAxisSpacing: 12,
-          childAspectRatio: 0.90,
+          childAspectRatio: 0.84,
         ),
         delegate: SliverChildBuilderDelegate(
           (context, index) {

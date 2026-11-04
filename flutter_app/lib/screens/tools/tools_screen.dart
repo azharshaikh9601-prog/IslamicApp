@@ -111,11 +111,12 @@ class _ToolsScreenState extends State<ToolsScreen>
                       child: Row(
                         children: [
                           Expanded(
+                            flex: 5,
                             child: Text(
                               dhikr.name,
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 13,
+                                fontSize: 12.5,
                                 fontWeight: FontWeight.w600,
                               ),
                               maxLines: 1,
@@ -123,11 +124,17 @@ class _ToolsScreenState extends State<ToolsScreen>
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            dhikr.arabic,
-                            style: AppTheme.arabicStyle.copyWith(
-                              fontSize: 15,
-                              color: AppColors.lightGold,
+                          Expanded(
+                            flex: 4,
+                            child: Text(
+                              dhikr.arabic,
+                              style: AppTheme.arabicStyle.copyWith(
+                                fontSize: 14,
+                                color: AppColors.lightGold,
+                              ),
+                              textAlign: TextAlign.right,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],

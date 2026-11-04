@@ -132,7 +132,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 const BottomNavigationBarItem(
                   icon: Icon(Icons.ondemand_video_outlined),
                   activeIcon: Icon(Icons.ondemand_video_rounded),
-                  label: 'Lessons',
+                  label: 'Videos',
                 ),
                 const BottomNavigationBarItem(
                   icon: Icon(Icons.school_outlined),

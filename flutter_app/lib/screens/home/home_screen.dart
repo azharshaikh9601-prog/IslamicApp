@@ -525,7 +525,7 @@ class HomeScreen extends StatelessWidget {
                 Positioned(
                   top: 8,
                   left: 8,
-                  right: 8,
+                  right: isWatched ? 78 : 8,
                   child: Row(
                     children: [
                       Flexible(
@@ -712,92 +712,101 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(height: 10),
 
                 // Action Buttons Row (Play In-App, Seen toggle, Star)
-                Row(
-                  children: [
-                    InkWell(
-                      onTap: () => _playVideoInApp(context, video),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF133629),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: AppColors.borderEmerald),
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.play_arrow,
-                                color: AppColors.primaryGold, size: 12),
-                            SizedBox(width: 2),
-                            Text(
-                              'Play In-App',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                              ),
+                SizedBox(
+                  width: double.infinity,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Row(
+                      children: [
+                        InkWell(
+                          onTap: () => _playVideoInApp(context, video),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 3.5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF133629),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: AppColors.borderEmerald),
                             ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    GestureDetector(
-                      onTap: () => appState.toggleVideoWatched(video.id),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: isWatched
-                              ? Colors.redAccent.withOpacity(0.18)
-                              : Colors.white.withOpacity(0.06),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: isWatched ? Colors.redAccent : Colors.white24,
-                            width: 0.8,
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.play_arrow,
+                                    color: AppColors.primaryGold, size: 12),
+                                SizedBox(width: 2),
+                                Text(
+                                  'Play In-App',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              isWatched ? Icons.check : Icons.visibility_outlined,
-                              color: isWatched ? Colors.redAccent : Colors.white70,
-                              size: 11,
-                            ),
-                            const SizedBox(width: 2),
-                            Text(
-                              isWatched ? 'Seen ✓' : 'Mark Seen',
-                              style: TextStyle(
-                                color: isWatched ? Colors.redAccent : Colors.white70,
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.bold,
+                        const SizedBox(width: 5),
+                        GestureDetector(
+                          onTap: () => appState.toggleVideoWatched(video.id),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 5, vertical: 3.5),
+                            decoration: BoxDecoration(
+                              color: isWatched
+                                  ? Colors.redAccent.withOpacity(0.18)
+                                  : Colors.white.withOpacity(0.06),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: isWatched ? Colors.redAccent : Colors.white24,
+                                width: 0.8,
                               ),
                             ),
-                          ],
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  isWatched ? Icons.check : Icons.visibility_outlined,
+                                  color: isWatched ? Colors.redAccent : Colors.white70,
+                                  size: 11,
+                                ),
+                                SizedBox(width: 2),
+                                Text(
+                                  isWatched ? 'Seen ✓' : 'Mark Seen',
+                                  style: TextStyle(
+                                    color: isWatched ? Colors.redAccent : Colors.white70,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 20),
+                        GestureDetector(
+                          onTap: () => _shareVideo(video),
+                          child: const Icon(
+                            Icons.share_rounded,
+                            color: AppColors.darkTextSecondary,
+                            size: 16,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () => appState.toggleBookmark(video.id),
+                          child: Icon(
+                            isBookmarked ? Icons.star : Icons.star_border,
+                            color: isBookmarked
+                                ? AppColors.brightGold
+                                : AppColors.darkTextMuted,
+                            size: 18,
+                          ),
+                        ),
+                      ],
                     ),
-                    const Spacer(),
-                    GestureDetector(
-                      onTap: () => _shareVideo(video),
-                      child: const Icon(
-                        Icons.share_rounded,
-                        color: AppColors.darkTextSecondary,
-                        size: 16,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () => appState.toggleBookmark(video.id),
-                      child: Icon(
-                        isBookmarked ? Icons.star : Icons.star_border,
-                        color: isBookmarked
-                            ? AppColors.brightGold
-                            : AppColors.darkTextMuted,
-                        size: 18,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),

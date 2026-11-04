@@ -196,20 +196,32 @@ class ScholarProfileScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 18),
                   // Stats Grid
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildProfileStat(profile['subscribers'] as String, 'Subscribers'),
-                      _buildProfileStat(profile['totalViews'] as String, 'Views'),
-                      _buildProfileStat(profile['videosCount'] as String, 'Videos'),
-                    ],
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceEmerald.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.borderEmerald.withOpacity(0.5)),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(child: _buildProfileStat(profile['subscribers'] as String, 'Subscribers')),
+                        Container(height: 30, width: 1, color: AppColors.borderEmerald),
+                        Expanded(child: _buildProfileStat(profile['totalViews'] as String, 'Total Views')),
+                        Container(height: 30, width: 1, color: AppColors.borderEmerald),
+                        Expanded(child: _buildProfileStat(profile['videosCount'] as String, 'Videos')),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 20),
                   // Official YouTube Button
                   ElevatedButton.icon(
                     onPressed: () => _launchUrl(profile['youtubeUrl'] as String),
                     icon: const Icon(Icons.play_circle_fill, size: 20),
-                    label: const Text('Subscribe on YouTube (@HAFIZHASNAINJAANI)'),
+                    label: const FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text('Subscribe on YouTube (@HAFIZHASNAINJAANI)'),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.youTube,
                       foregroundColor: Colors.white,
@@ -241,45 +253,6 @@ class ScholarProfileScreen extends StatelessWidget {
                 ],
               ),
             ),
-
-            const SizedBox(height: 18),
-
-            // Official Information List
-            Material(
-              color: AppColors.darkCard,
-              borderRadius: BorderRadius.circular(16),
-              clipBehavior: Clip.antiAlias,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.borderEmerald),
-                ),
-                child: Column(
-                children: [
-                  _buildInfoTile(
-                    icon: Icons.language,
-                    title: 'Official Domain',
-                    subtitle: profile['domain'] as String,
-                    onTap: () => _launchUrl('https://${profile['domain']}'),
-                  ),
-                  const Divider(color: AppColors.borderEmerald, height: 1),
-                  _buildInfoTile(
-                    icon: Icons.location_on,
-                    title: 'Headquarters',
-                    subtitle: profile['location'] as String,
-                    onTap: () {},
-                  ),
-                  const Divider(color: AppColors.borderEmerald, height: 1),
-                  _buildInfoTile(
-                    icon: Icons.email,
-                    title: 'Official Email',
-                    subtitle: profile['email'] as String,
-                    onTap: () => _launchUrl('mailto:${profile['email']}'),
-                  ),
-                ],
-              ),
-            ),
-          ),
           ],
         );
       },
@@ -288,53 +261,31 @@ class ScholarProfileScreen extends StatelessWidget {
 
   Widget _buildProfileStat(String value, String label) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         const SizedBox(height: 2),
-        Text(
-          label,
-          style: const TextStyle(
-            color: AppColors.lightGold,
-            fontSize: 11,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.lightGold,
+              fontSize: 10.5,
+            ),
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildInfoTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      leading: Icon(icon, color: AppColors.primaryGold, size: 20),
-      title: Text(
-        title,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: const TextStyle(
-          color: AppColors.darkTextSecondary,
-          fontSize: 11,
-        ),
-      ),
-      trailing: const Icon(Icons.arrow_forward_ios,
-          color: AppColors.darkTextMuted, size: 12),
-      onTap: onTap,
     );
   }
 }
