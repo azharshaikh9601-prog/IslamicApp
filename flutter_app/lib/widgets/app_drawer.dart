@@ -142,7 +142,7 @@ class AppDrawer extends StatelessWidget {
                 ),
                 _buildDrawerItem(
                   icon: Icons.ondemand_video_rounded,
-                  title: 'Islamic Lessons',
+                  title: 'Islamic Videos',
                   onTap: () {
                     Navigator.pop(context);
                     onTabSelected(2);
@@ -166,7 +166,7 @@ class AppDrawer extends StatelessWidget {
                 ),
                 _buildDrawerItem(
                   icon: Icons.access_time_rounded,
-                  title: 'Deen Tools',
+                  title: 'Islamic Tools',
                   onTap: () {
                     Navigator.pop(context);
                     onTabSelected(6);
@@ -202,12 +202,6 @@ class AppDrawer extends StatelessWidget {
                   ),
                 const Divider(color: AppColors.borderEmerald, thickness: 1),
                 // External Scholar Links
-                _buildDrawerItem(
-                  icon: Icons.language_rounded,
-                  title: 'Official Website',
-                  subtitle: 'hafizhasnainjaani.com',
-                  onTap: () => _openUrl('https://hafizhasnainjaani.com'),
-                ),
                 _buildDrawerItem(
                   icon: Icons.ondemand_video_rounded,
                   title: 'YouTube Channel',

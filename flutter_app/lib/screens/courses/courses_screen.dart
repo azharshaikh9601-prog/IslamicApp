@@ -1530,24 +1530,26 @@ class _CoursesScreenState extends State<CoursesScreen> {
                     ],
                   ),
 
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () => _showCreateCourseDialog(context, appState),
-                      icon: const Icon(Icons.add_rounded, size: 16),
-                      label: const Text('Create New Course (Course Banayein)'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryGold,
-                        foregroundColor: AppColors.darkEmerald,
-                        padding: const EdgeInsets.symmetric(vertical: 9),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                  if (appState.isAdmin) ...[
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _showCreateCourseDialog(context, appState),
+                        icon: const Icon(Icons.add_rounded, size: 16),
+                        label: const Text('Create New Course (Course Banayein)'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryGold,
+                          foregroundColor: AppColors.darkEmerald,
+                          padding: const EdgeInsets.symmetric(vertical: 9),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                         ),
-                        textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),

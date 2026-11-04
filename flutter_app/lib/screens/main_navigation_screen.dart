@@ -9,6 +9,7 @@ import 'videos/videos_screen.dart';
 import 'courses/courses_screen.dart';
 import 'quotes/quotes_screen.dart';
 import 'tools/tools_screen.dart';
+import 'tools/ask_masala_screen.dart';
 import 'profile/scholar_profile_screen.dart';
 import 'dashboard/dashboard_screen.dart';
 
@@ -31,7 +32,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   void _openAskMasala() {
-    setState(() => _currentIndex = 6); // Tab 6: Deen Tools tab
+    setState(() => _currentIndex = 8); // Tab 8: Dedicated Ask Mas'ala
   }
 
   @override
@@ -48,10 +49,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       const CoursesScreen(), // Tab 3: Courses
       const QuotesScreen(), // Tab 4: Daily Quotes (Quotes)
       const DashboardScreen(), // Tab 5: Scholar Dashboard (Admin)
-      const ToolsScreen(), // Tab 6: Deen Tools
+      const ToolsScreen(), // Tab 6: Islamic Tools (Digital Tasbeeh & Salah Times)
       ScholarProfileScreen(
         onOpenAskMasala: _openAskMasala,
       ), // Tab 7: Scholar Profile
+      AskMasalaScreen(
+        onBack: () => _onTabSelected(0),
+      ), // Tab 8: Dedicated Ask Mas'ala Screen
     ];
 
     return AnimatedBuilder(
@@ -61,8 +65,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         // If not admin and somehow on admin tab, redirect to Home
         final int effectiveIndex = (!isAdmin && _currentIndex == 5) ? 0 : _currentIndex;
 
-        // For the Reels screen (tab 1), make it full screen without top app bar
-        final bool isReelsTab = effectiveIndex == 1;
+        // Reels screen (tab 1) and Ask Masala (tab 8) have their own header/fullscreen layout
+        final bool hideMainAppBar = effectiveIndex == 1 || effectiveIndex == 8;
 
         // Map effectiveIndex to bottom navigation bar index
         int navBarIndex = 0;
@@ -76,7 +80,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
         return Scaffold(
           backgroundColor: AppColors.darkBackground,
-          appBar: isReelsTab
+          appBar: hideMainAppBar
               ? null
               : CustomAppBar(
                   currentTabIndex: effectiveIndex,

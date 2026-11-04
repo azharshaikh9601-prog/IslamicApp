@@ -785,7 +785,7 @@ class _VideosScreenState extends State<VideosScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: const [
                               Text(
-                                'Islamic Teaching & Lessons',
+                                'Learn Islam Easily',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 17,
@@ -794,7 +794,7 @@ class _VideosScreenState extends State<VideosScreen> {
                               ),
                               SizedBox(height: 3),
                               Text(
-                                'Practical guides, Namaz classes, YouTube playlists & authentic series by Hafiz Hasnain Jaani',
+                                'Namaz, wudu, ghusal, islamic masail & more',
                                 style: TextStyle(
                                   color: AppColors.darkTextMuted,
                                   fontSize: 11.5,
@@ -807,44 +807,46 @@ class _VideosScreenState extends State<VideosScreen> {
                       ],
                     ),
 
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () => _showCreatePlaylistDialog(context, appState),
-                            icon: const Icon(Icons.playlist_add, size: 16),
-                            label: const Text('Create Playlist'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryGold,
-                              foregroundColor: AppColors.darkEmerald,
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                    if (appState.isAdmin) ...[
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => _showCreatePlaylistDialog(context, appState),
+                              icon: const Icon(Icons.playlist_add, size: 16),
+                              label: const Text('Create Playlist'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryGold,
+                                foregroundColor: AppColors.darkEmerald,
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                               ),
-                              textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () => _showUploadVideoDialog(context, appState),
-                            icon: const Icon(Icons.upload, size: 16),
-                            label: const Text('Upload Video'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryGold,
-                              foregroundColor: AppColors.darkEmerald,
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => _showUploadVideoDialog(context, appState),
+                              icon: const Icon(Icons.upload, size: 16),
+                              label: const Text('Upload Video'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryGold,
+                                foregroundColor: AppColors.darkEmerald,
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                               ),
-                              textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
+                    ],
 
                     const SizedBox(height: 12),
 

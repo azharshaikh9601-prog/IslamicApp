@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/prayer_locations.dart';
@@ -24,9 +23,9 @@ class _ToolsScreenState extends State<ToolsScreen>
   void initState() {
     super.initState();
     _tabController = TabController(
-      length: 3,
+      length: 2,
       vsync: this,
-      initialIndex: widget.initialTabIndex,
+      initialIndex: widget.initialTabIndex.clamp(0, 1),
     );
   }
 
@@ -40,7 +39,7 @@ class _ToolsScreenState extends State<ToolsScreen>
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Top Tool Tabs
+        // Top Tool Tabs (Digital Tasbeeh & Salah Times)
         Container(
           color: AppColors.darkEmerald,
           child: TabBar(
@@ -54,7 +53,6 @@ class _ToolsScreenState extends State<ToolsScreen>
             tabs: const [
               Tab(icon: Icon(Icons.fingerprint), text: 'Digital Tasbeeh'),
               Tab(icon: Icon(Icons.access_time), text: 'Salah Times'),
-              Tab(icon: Icon(Icons.question_answer), text: "Ask Mas'ala"),
             ],
           ),
         ),
@@ -66,7 +64,6 @@ class _ToolsScreenState extends State<ToolsScreen>
             children: [
               _buildTasbeehTab(),
               _buildPrayerTimesTab(),
-              _buildAskMasalaTab(),
             ],
           ),
         ),
@@ -543,177 +540,6 @@ class _ToolsScreenState extends State<ToolsScreen>
           ),
         ],
       ),
-    );
-  }
-
-  // ==========================================================================
-  // TAB 3: ASK A MAS'ALA (FATWA INQUIRIES VIA WHATSAPP)
-  // ==========================================================================
-  Widget _buildAskMasalaTab() {
-    final nameCtrl = TextEditingController();
-    final cityCtrl = TextEditingController();
-    final questionCtrl = TextEditingController();
-
-    Future<void> submitToWhatsApp() async {
-      final name = nameCtrl.text.trim();
-      final city = cityCtrl.text.trim();
-      final q = questionCtrl.text.trim();
-
-      if (q.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please write your religious question or mas’ala!'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-        return;
-      }
-
-      final text =
-          'السلام علیکم ورحمۃ اللہ وبرکاتہ\n\n'
-          'Hazrat Hafiz Hasnain Jaani Sahab,\n\n'
-          'Name: ${name.isNotEmpty ? name : "Student of Deen"}\n'
-          'City/District: ${city.isNotEmpty ? city : "India"}\n\n'
-          'Mas’ala / Fatwa Inquiry:\n$q\n\n'
-          'Submitted via Hafiz Hasnain Jaani Official App';
-
-      final encoded = Uri.encodeComponent(text);
-      final uri = Uri.parse('https://wa.me/919876543210?text=$encoded');
-
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      }
-    }
-
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        // Scholar Office Info Card
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.darkCard,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.borderEmerald),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  image: DecorationImage(
-                    image: AssetImage('assets/images/logo.jpg'),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
-                      'Hafiz Hasnain Jaani Fatwa Office',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Purnia, Bihar • Fiqh-e-Hanafi Consultation',
-                      style: TextStyle(
-                        color: AppColors.darkTextSecondary,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 20),
-
-        // Name Field
-        TextField(
-          controller: nameCtrl,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
-          decoration: InputDecoration(
-            labelText: 'Your Name (آپ کا نام)',
-            labelStyle: const TextStyle(color: AppColors.darkTextSecondary),
-            filled: true,
-            fillColor: AppColors.darkCard,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.borderEmerald),
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 14),
-
-        // City Field
-        TextField(
-          controller: cityCtrl,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
-          decoration: InputDecoration(
-            labelText: 'Your City / District (شہر)',
-            labelStyle: const TextStyle(color: AppColors.darkTextSecondary),
-            filled: true,
-            fillColor: AppColors.darkCard,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.borderEmerald),
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 14),
-
-        // Question Field
-        TextField(
-          controller: questionCtrl,
-          maxLines: 4,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
-          decoration: InputDecoration(
-            labelText: "Your Question / Mas'ala (مسئلہ بیان فرمائیں)",
-            alignLabelWithHint: true,
-            labelStyle: const TextStyle(color: AppColors.darkTextSecondary),
-            filled: true,
-            fillColor: AppColors.darkCard,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.borderEmerald),
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 20),
-
-        // Submit via WhatsApp Button
-        ElevatedButton.icon(
-          onPressed: submitToWhatsApp,
-          icon: const Icon(Icons.chat_bubble, size: 18),
-          label: const Text('Send Question via WhatsApp'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.whatsApp,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            textStyle: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

@@ -423,7 +423,7 @@ class HomeScreen extends StatelessWidget {
               Text('🎥', style: TextStyle(fontSize: 18)),
               SizedBox(width: 6),
               Text(
-                'Latest YouTube Bayanaat & Lessons',
+                'Latest Islamic Videos',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 15,
@@ -434,7 +434,7 @@ class HomeScreen extends StatelessWidget {
           ),
           const SizedBox(height: 3),
           const Text(
-            'Full lectures & authentic lessons — Tap to play directly in-app',
+            'Watch Islamic Videos, Namaz Tutorials & Authentic Deeni Guidance',
             style: TextStyle(
               color: AppColors.darkTextMuted,
               fontSize: 12,
@@ -686,16 +686,22 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    const Text(
-                      'Hafiz Hasnain Jaani',
-                      style: TextStyle(
-                        color: AppColors.darkTextSecondary,
-                        fontSize: 11,
+                    const Flexible(
+                      child: Text(
+                        'Hafiz Hasnain Jaani',
+                        style: TextStyle(
+                          color: AppColors.darkTextSecondary,
+                          fontSize: 11,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 4),
+                    const Text('•', style: TextStyle(color: AppColors.darkTextMuted, fontSize: 10)),
+                    const SizedBox(width: 4),
                     Text(
-                      '${video.views} • ${video.date}',
+                      video.views,
                       style: const TextStyle(
                         color: AppColors.darkTextMuted,
                         fontSize: 10,
