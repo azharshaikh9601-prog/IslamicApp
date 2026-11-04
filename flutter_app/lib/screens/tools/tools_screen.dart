@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
-import '../../data/initial_data.dart';
 import '../../data/prayer_locations.dart';
 import '../../services/storage_service.dart';
 import '../../services/prayer_calculator_service.dart';
@@ -102,31 +101,35 @@ class _ToolsScreenState extends State<ToolsScreen>
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
-                  value: InitialData.dhikrList.any((d) => d.id == currentDhikr.id)
+                  value: appState.dhikrList.any((d) => d.id == currentDhikr.id)
                       ? currentDhikr.id
-                      : InitialData.dhikrList.first.id,
+                      : appState.dhikrList.first.id,
                   dropdownColor: AppColors.darkEmerald,
                   icon: const Icon(Icons.arrow_drop_down,
                       color: AppColors.primaryGold),
                   isExpanded: true,
-                  items: InitialData.dhikrList.map((dhikr) {
+                  items: appState.dhikrList.map((dhikr) {
                     return DropdownMenuItem<String>(
                       value: dhikr.id,
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            dhikr.name,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                          Expanded(
+                            child: Text(
+                              dhikr.name,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          const SizedBox(width: 8),
                           Text(
                             dhikr.arabic,
                             style: AppTheme.arabicStyle.copyWith(
-                              fontSize: 16,
+                              fontSize: 15,
                               color: AppColors.lightGold,
                             ),
                           ),
@@ -136,9 +139,9 @@ class _ToolsScreenState extends State<ToolsScreen>
                   }).toList(),
                   onChanged: (newDhikrId) {
                     if (newDhikrId != null) {
-                      final selected = InitialData.dhikrList.firstWhere(
+                      final selected = appState.dhikrList.firstWhere(
                         (d) => d.id == newDhikrId,
-                        orElse: () => InitialData.dhikrList.first,
+                        orElse: () => appState.dhikrList.first,
                       );
                       appState.selectDhikr(selected);
                     }

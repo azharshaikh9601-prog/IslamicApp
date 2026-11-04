@@ -45,72 +45,243 @@ class _CoursesScreenState extends State<CoursesScreen> {
   }
 
   void _showEditPriceDialog(BuildContext context, CourseModel course, AppStateService appState) {
+    _showEditCourseDialog(context, course, appState);
+  }
+
+  void _showEditCourseDialog(BuildContext context, CourseModel course, AppStateService appState) {
+    final titleCtrl = TextEditingController(text: course.title);
+    final urduCtrl = TextEditingController(text: course.urduTitle);
     final priceCtrl = TextEditingController(text: course.price.toString());
+    final descCtrl = TextEditingController(text: course.description);
+    String category = course.category;
+
+    final categories = [
+      {'id': 'namaz', 'name': 'Namaz & Prayer'},
+      {'id': 'qaida', 'name': 'Baghdadi Tajweed & Quran'},
+      {'id': 'wudu', 'name': 'Wudu & Ghusl Taharat'},
+      {'id': 'nikah', 'name': 'Nikah & Family Life'},
+      {'id': 'zakat', 'name': 'Zakat & Charity'},
+      {'id': 'seerat', 'name': 'Seerat-un-Nabi ﷺ'},
+    ];
+
+    if (!categories.any((c) => c['id'] == category)) {
+      category = 'namaz';
+    }
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.darkEmerald,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: AppColors.darkEmerald,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: const BorderSide(color: AppColors.primaryGold, width: 1.5),
+          ),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: const [
+                  Icon(Icons.edit_note, color: AppColors.primaryGold),
+                  SizedBox(width: 8),
+                  Text(
+                    'Admin: Edit Course',
+                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              IconButton(
+                icon: const Icon(Icons.close, color: Colors.white70, size: 20),
+                onPressed: () => Navigator.pop(ctx),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 480,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: titleCtrl,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    decoration: const InputDecoration(
+                      labelText: 'Course Title',
+                      labelStyle: TextStyle(color: AppColors.lightGold),
+                      enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.borderEmerald)),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: urduCtrl,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    decoration: const InputDecoration(
+                      labelText: 'Urdu Title (اردو عنوان)',
+                      labelStyle: TextStyle(color: AppColors.lightGold),
+                      enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.borderEmerald)),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: priceCtrl,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    decoration: const InputDecoration(
+                      labelText: 'Course Fee (in ₹, enter 0 for Free)',
+                      labelStyle: TextStyle(color: AppColors.lightGold),
+                      enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.borderEmerald)),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: descCtrl,
+                    maxLines: 2,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    decoration: const InputDecoration(
+                      labelText: 'Course Overview / Description',
+                      labelStyle: TextStyle(color: AppColors.lightGold),
+                      enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.borderEmerald)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: category,
+                    dropdownColor: AppColors.darkEmerald,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    decoration: const InputDecoration(
+                      labelText: 'Category',
+                      labelStyle: TextStyle(color: AppColors.lightGold),
+                      enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.borderEmerald)),
+                    ),
+                    items: categories
+                        .map((c) => DropdownMenuItem(value: c['id'], child: Text(c['name']!)))
+                        .toList(),
+                    onChanged: (val) {
+                      if (val != null) setDialogState(() => category = val);
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  // Delete course danger zone
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.redAccent.withOpacity(0.4)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              'Danger Zone',
+                              style: TextStyle(color: Colors.redAccent, fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              'Permanently remove course',
+                              style: TextStyle(color: Colors.white60, fontSize: 10),
+                            ),
+                          ],
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: () => _confirmDeleteCourse(context, ctx, course, appState),
+                          icon: const Icon(Icons.delete_forever, size: 14, color: Colors.white),
+                          label: const Text('Delete Course', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.redAccent.shade700,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final newFee = int.tryParse(priceCtrl.text.trim()) ?? course.price;
+                await appState.updateCourse(
+                  courseId: course.id,
+                  title: titleCtrl.text.trim().isEmpty ? course.title : titleCtrl.text.trim(),
+                  urduTitle: urduCtrl.text.trim(),
+                  description: descCtrl.text.trim().isEmpty ? course.description : descCtrl.text.trim(),
+                  category: category,
+                  price: newFee,
+                );
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('✓ Course updated successfully!'),
+                      backgroundColor: AppColors.darkEmerald,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryGold,
+                foregroundColor: AppColors.darkEmerald,
+              ),
+              child: const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteCourse(BuildContext parentContext, BuildContext dialogContext, CourseModel course, AppStateService appState) {
+    showDialog(
+      context: parentContext,
+      builder: (confirmCtx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E0A0A),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: AppColors.primaryGold, width: 1.5),
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Colors.redAccent, width: 1.5),
         ),
         title: Row(
           children: const [
-            Icon(Icons.edit_note, color: AppColors.primaryGold),
+            Icon(Icons.warning_amber_rounded, color: Colors.redAccent),
             SizedBox(width: 8),
-            Text(
-              'Admin: Set Course Amount',
-              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-            ),
+            Text('Delete Course?', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Course: ${course.title}',
-              style: const TextStyle(color: AppColors.lightGold, fontSize: 12),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: priceCtrl,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-              decoration: const InputDecoration(
-                labelText: 'Course Amount (in â‚¹, 0 for Free)',
-                hintText: 'e.g. 499 or 0',
-                labelStyle: TextStyle(color: AppColors.lightGold),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.borderEmerald)),
-              ),
-            ),
-          ],
+        content: Text(
+          'Are you sure you want to permanently delete "${course.title}"? All lessons associated with this course will also be removed.',
+          style: const TextStyle(color: Colors.white70, fontSize: 13),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () => Navigator.pop(confirmCtx),
             child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
           ),
           ElevatedButton(
             onPressed: () async {
-              final newFee = int.tryParse(priceCtrl.text.trim()) ?? course.price;
-              await appState.updateCoursePrice(course.id, newFee);
-              if (ctx.mounted) Navigator.pop(ctx);
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+              await appState.deleteCourse(course.id);
+              if (confirmCtx.mounted) Navigator.pop(confirmCtx);
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
+              if (parentContext.mounted) {
+                ScaffoldMessenger.of(parentContext).showSnackBar(
                   SnackBar(
-                    content: Text('âœ“ Course amount updated to â‚¹$newFee!'),
-                    backgroundColor: AppColors.darkEmerald,
+                    content: Text('✓ Course "${course.title}" deleted.'),
+                    backgroundColor: Colors.red.shade900,
                   ),
                 );
               }
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryGold,
-              foregroundColor: AppColors.darkEmerald,
-            ),
-            child: const Text('Save Amount', style: TextStyle(fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+            child: const Text('Yes, Delete', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -1827,10 +1998,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
                             child: OutlinedButton.icon(
                               onPressed: () {
                                 Navigator.pop(ctx);
-                                _showEditPriceDialog(context, course, appState);
+                                _showEditCourseDialog(context, course, appState);
                               },
-                              icon: const Icon(Icons.currency_rupee, size: 14, color: AppColors.primaryGold),
-                              label: Text('Set Fee (Current: ₹${course.price})', style: const TextStyle(color: AppColors.lightGold, fontSize: 11)),
+                              icon: const Icon(Icons.edit, size: 14, color: AppColors.primaryGold),
+                              label: const Text('Edit / Delete Course', style: TextStyle(color: AppColors.lightGold, fontSize: 11)),
                               style: OutlinedButton.styleFrom(
                                 side: const BorderSide(color: AppColors.primaryGold),
                                 padding: const EdgeInsets.symmetric(vertical: 8),

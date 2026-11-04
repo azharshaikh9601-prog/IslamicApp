@@ -456,6 +456,44 @@ END;");
         return null;
     }
 
+    public async Task<bool> DeleteCourseAsync(string courseId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IslamicAppContext>();
+        var course = await context.Courses.FirstOrDefaultAsync(c => c.Id == courseId);
+        if (course != null)
+        {
+            context.Courses.Remove(course);
+            await context.SaveChangesAsync();
+            return true;
+        }
+        return false;
+    }
+
+    public async Task<CourseItem?> UpdateCourseAsync(string courseId, UpdateCourseRequest req)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IslamicAppContext>();
+        var course = await context.Courses.FirstOrDefaultAsync(c => c.Id == courseId);
+        if (course != null)
+        {
+            if (!string.IsNullOrWhiteSpace(req.Title)) course.Title = req.Title;
+            if (!string.IsNullOrWhiteSpace(req.UrduTitle)) course.UrduTitle = req.UrduTitle;
+            if (!string.IsNullOrWhiteSpace(req.Description)) course.Description = req.Description;
+            if (!string.IsNullOrWhiteSpace(req.Category)) course.Category = req.Category;
+            if (req.Price.HasValue)
+            {
+                course.Price = req.Price.Value;
+                course.Badge = req.Price.Value == 0 ? "FREE" : "COURSE";
+            }
+            if (req.OriginalPrice.HasValue) course.OriginalPrice = req.OriginalPrice.Value;
+            if (req.DiscountPercent.HasValue) course.DiscountPercent = req.DiscountPercent.Value;
+            await context.SaveChangesAsync();
+            return course;
+        }
+        return null;
+    }
+
     // ---------------------------------------------------------------------------
     // Authentication & User Management
     // ---------------------------------------------------------------------------

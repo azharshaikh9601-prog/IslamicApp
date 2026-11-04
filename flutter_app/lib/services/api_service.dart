@@ -497,6 +497,43 @@ class ApiService {
     }
   }
 
+  Future<bool> deleteCourse(String courseId) async {
+    try {
+      final res = await http.delete(
+        Uri.parse('$baseUrl/courses/$courseId'),
+      ).timeout(const Duration(seconds: 4));
+      return res.statusCode == 200 || res.statusCode == 204;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> updateCourse({
+    required String courseId,
+    required String title,
+    required String urduTitle,
+    required String description,
+    required String category,
+    required int price,
+  }) async {
+    try {
+      final res = await http.put(
+        Uri.parse('$baseUrl/courses/$courseId'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'title': title,
+          'urduTitle': urduTitle,
+          'description': description,
+          'category': category,
+          'price': price,
+        }),
+      ).timeout(const Duration(seconds: 4));
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<Map<String, dynamic>?> enrollInCourse(String courseId, String userId) async {
     try {
       final res = await http.post(

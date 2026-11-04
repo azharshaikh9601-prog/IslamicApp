@@ -160,6 +160,61 @@ class AppStateService extends ChangeNotifier {
     return false;
   }
 
+  Future<bool> deleteCourse(String courseId) async {
+    _courses.removeWhere((c) => c.id == courseId);
+    notifyListeners();
+    try {
+      await _api.deleteCourse(courseId);
+    } catch (_) {}
+    return true;
+  }
+
+  Future<bool> updateCourse({
+    required String courseId,
+    required String title,
+    required String urduTitle,
+    required String description,
+    required String category,
+    required int price,
+  }) async {
+    final idx = _courses.indexWhere((c) => c.id == courseId);
+    if (idx >= 0) {
+      final old = _courses[idx];
+      _courses[idx] = CourseModel(
+        id: old.id,
+        title: title,
+        urduTitle: urduTitle,
+        category: category,
+        price: price,
+        originalPrice: old.originalPrice,
+        discountPercent: old.discountPercent,
+        duration: old.duration,
+        lessonsCount: old.lessonsCount,
+        badge: price == 0 ? 'FREE' : 'COURSE',
+        instructor: old.instructor,
+        rating: old.rating,
+        studentsEnrolled: old.studentsEnrolled,
+        thumbnail: old.thumbnail,
+        description: description,
+        highlights: old.highlights,
+        lessons: old.lessons,
+      );
+      notifyListeners();
+      try {
+        await _api.updateCourse(
+          courseId: courseId,
+          title: title,
+          urduTitle: urduTitle,
+          description: description,
+          category: category,
+          price: price,
+        );
+      } catch (_) {}
+      return true;
+    }
+    return false;
+  }
+
   Future<Map<String, dynamic>> enrollInCourse(String courseId) async {
     if (_currentUser == null) {
       return {'success': false, 'message': 'Please sign in or create an account to enroll.'};
@@ -421,7 +476,12 @@ class AppStateService extends ChangeNotifier {
   // Tasbeeh State
   int _tasbeehCount = 0;
   int _tasbeehTotal = 1420;
-  DhikrModel get currentDhikr => _dhikrList.isNotEmpty ? _dhikrList[0] : InitialData.dhikrList[0];
+  String _selectedDhikrId = 'subhanallah';
+
+  DhikrModel get currentDhikr => _dhikrList.firstWhere(
+        (d) => d.id == _selectedDhikrId,
+        orElse: () => _dhikrList.isNotEmpty ? _dhikrList[0] : InitialData.dhikrList[0],
+      );
 
   int get tasbeehCount => _tasbeehCount;
   int get tasbeehTotal => _tasbeehTotal;
@@ -443,11 +503,7 @@ class AppStateService extends ChangeNotifier {
   }
 
   void selectDhikr(DhikrModel dhikr) {
-    final idx = _dhikrList.indexWhere((d) => d.id == dhikr.id);
-    if (idx > 0) {
-      _dhikrList.removeAt(idx);
-      _dhikrList.insert(0, dhikr);
-    }
+    _selectedDhikrId = dhikr.id;
     _tasbeehCount = 0;
     notifyListeners();
     _api.syncSettings(dhikrId: dhikr.id);

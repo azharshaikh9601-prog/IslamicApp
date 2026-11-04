@@ -211,6 +211,17 @@ public class UpdateCoursePriceRequest
     public int? DiscountPercent { get; set; }
 }
 
+public class UpdateCourseRequest
+{
+    public string? Title { get; set; }
+    public string? UrduTitle { get; set; }
+    public string? Description { get; set; }
+    public string? Category { get; set; }
+    public int? Price { get; set; }
+    public int? OriginalPrice { get; set; }
+    public int? DiscountPercent { get; set; }
+}
+
 public class EnrollCourseRequest
 {
     public string UserId { get; set; } = string.Empty;

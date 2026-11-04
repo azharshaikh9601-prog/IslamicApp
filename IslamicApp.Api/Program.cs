@@ -374,6 +374,18 @@ app.MapPut("/api/courses/{id}/price", async (SqlDatabaseService db, string id, U
     return updated is not null ? Results.Ok(updated) : Results.NotFound();
 });
 
+app.MapPut("/api/courses/{id}", async (SqlDatabaseService db, string id, UpdateCourseRequest req) =>
+{
+    var updated = await db.UpdateCourseAsync(id, req);
+    return updated is not null ? Results.Ok(updated) : Results.NotFound();
+});
+
+app.MapDelete("/api/courses/{id}", async (SqlDatabaseService db, string id) =>
+{
+    var deleted = await db.DeleteCourseAsync(id);
+    return deleted ? Results.NoContent() : Results.NotFound();
+});
+
 app.MapPost("/api/courses/{id}/enroll", async (SqlDatabaseService db, string id, EnrollCourseRequest req) =>
 {
     var res = await db.EnrollCourseAsync(req.UserId, id);
