@@ -190,15 +190,16 @@ class AppDrawer extends StatelessWidget {
                     onOpenAskMasala();
                   },
                 ),
-                _buildDrawerItem(
-                  icon: Icons.dashboard_rounded,
-                  title: 'Scholar Dashboard',
-                  badge: 'Admin',
-                  onTap: () {
-                    Navigator.pop(context);
-                    onOpenDashboard();
-                  },
-                ),
+                if (AppStateService().isAdmin)
+                  _buildDrawerItem(
+                    icon: Icons.dashboard_rounded,
+                    title: 'Scholar Dashboard',
+                    badge: 'Admin',
+                    onTap: () {
+                      Navigator.pop(context);
+                      onOpenDashboard();
+                    },
+                  ),
                 const Divider(color: AppColors.borderEmerald, thickness: 1),
                 // External Scholar Links
                 _buildDrawerItem(

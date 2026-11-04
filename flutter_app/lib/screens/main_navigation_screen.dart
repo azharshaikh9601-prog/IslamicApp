@@ -54,21 +54,34 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       ), // Tab 7: Scholar Profile
     ];
 
-    // For the Reels screen (tab 1), make it full screen without top app bar
-    final bool isReelsTab = _currentIndex == 1;
-    final int navBarIndex = _currentIndex <= 5 ? _currentIndex : 0;
-
     return AnimatedBuilder(
       animation: appState,
       builder: (context, child) {
+        final bool isAdmin = appState.isAdmin;
+        // If not admin and somehow on admin tab, redirect to Home
+        final int effectiveIndex = (!isAdmin && _currentIndex == 5) ? 0 : _currentIndex;
+
+        // For the Reels screen (tab 1), make it full screen without top app bar
+        final bool isReelsTab = effectiveIndex == 1;
+
+        // Map effectiveIndex to bottom navigation bar index
+        int navBarIndex = 0;
+        if (effectiveIndex <= 4) {
+          navBarIndex = effectiveIndex;
+        } else if (effectiveIndex == 5 && isAdmin) {
+          navBarIndex = 5;
+        } else {
+          navBarIndex = 0;
+        }
+
         return Scaffold(
           backgroundColor: AppColors.darkBackground,
           appBar: isReelsTab
               ? null
               : CustomAppBar(
-                  currentTabIndex: _currentIndex,
+                  currentTabIndex: effectiveIndex,
                   onTabSelected: _onTabSelected,
-                  onAdminTap: _openDashboard,
+                  onAdminTap: isAdmin ? _openDashboard : null,
                 ),
           drawer: AppDrawer(
             onTabSelected: _onTabSelected,
@@ -80,7 +93,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               // Active Screen View
               Expanded(
                 child: IndexedStack(
-                  index: _currentIndex,
+                  index: effectiveIndex,
                   children: screens,
                 ),
               ),
@@ -101,37 +114,38 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               selectedFontSize: 10,
               unselectedFontSize: 9,
               type: BottomNavigationBarType.fixed,
-              items: const [
-                BottomNavigationBarItem(
+              items: [
+                const BottomNavigationBarItem(
                   icon: Icon(Icons.home_outlined),
                   activeIcon: Icon(Icons.home_rounded),
                   label: 'Home',
                 ),
-                BottomNavigationBarItem(
+                const BottomNavigationBarItem(
                   icon: Icon(Icons.bolt_outlined),
                   activeIcon: Icon(Icons.bolt),
                   label: 'Shorts',
                 ),
-                BottomNavigationBarItem(
+                const BottomNavigationBarItem(
                   icon: Icon(Icons.ondemand_video_outlined),
                   activeIcon: Icon(Icons.ondemand_video_rounded),
                   label: 'Lessons',
                 ),
-                BottomNavigationBarItem(
+                const BottomNavigationBarItem(
                   icon: Icon(Icons.school_outlined),
                   activeIcon: Icon(Icons.school),
                   label: 'Courses',
                 ),
-                BottomNavigationBarItem(
+                const BottomNavigationBarItem(
                   icon: Icon(Icons.format_quote_outlined),
                   activeIcon: Icon(Icons.format_quote_rounded),
                   label: 'Quotes',
                 ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.grid_view_outlined),
-                  activeIcon: Icon(Icons.grid_view_rounded),
-                  label: 'Admin',
-                ),
+                if (isAdmin)
+                  const BottomNavigationBarItem(
+                    icon: Icon(Icons.grid_view_outlined),
+                    activeIcon: Icon(Icons.grid_view_rounded),
+                    label: 'Admin',
+                  ),
               ],
             ),
           ),
