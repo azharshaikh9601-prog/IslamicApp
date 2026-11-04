@@ -7,6 +7,8 @@ class QuoteModel {
   final String reference;
   final String theme;
   final int likes;
+  final int shares;
+  final int saves;
   final bool isBookmarked;
 
   const QuoteModel({
@@ -18,19 +20,34 @@ class QuoteModel {
     required this.reference,
     this.theme = 'theme-emerald',
     this.likes = 0,
+    this.shares = 0,
+    this.saves = 0,
     this.isBookmarked = false,
   });
 
-  QuoteModel copyWith({bool? isBookmarked, int? likes}) {
+  QuoteModel copyWith({
+    String? category,
+    String? arabic,
+    String? urdu,
+    String? english,
+    String? reference,
+    String? theme,
+    int? likes,
+    int? shares,
+    int? saves,
+    bool? isBookmarked,
+  }) {
     return QuoteModel(
       id: id,
-      category: category,
-      arabic: arabic,
-      urdu: urdu,
-      english: english,
-      reference: reference,
-      theme: theme,
+      category: category ?? this.category,
+      arabic: arabic ?? this.arabic,
+      urdu: urdu ?? this.urdu,
+      english: english ?? this.english,
+      reference: reference ?? this.reference,
+      theme: theme ?? this.theme,
       likes: likes ?? this.likes,
+      shares: shares ?? this.shares,
+      saves: saves ?? this.saves,
       isBookmarked: isBookmarked ?? this.isBookmarked,
     );
   }
@@ -45,6 +62,8 @@ class QuoteModel {
       reference: json['reference'] ?? '',
       theme: json['theme'] ?? 'theme-emerald',
       likes: json['likes'] is int ? json['likes'] : int.tryParse(json['likes']?.toString() ?? '0') ?? 0,
+      shares: json['shares'] is int ? json['shares'] : int.tryParse(json['shares']?.toString() ?? '0') ?? 0,
+      saves: json['saves'] is int ? json['saves'] : int.tryParse(json['saves']?.toString() ?? '0') ?? 0,
       isBookmarked: json['isBookmarked'] ?? false,
     );
   }
@@ -59,6 +78,8 @@ class QuoteModel {
       'reference': reference,
       'theme': theme,
       'likes': likes,
+      'shares': shares,
+      'saves': saves,
       'isBookmarked': isBookmarked,
     };
   }

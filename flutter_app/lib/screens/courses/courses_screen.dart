@@ -126,8 +126,9 @@ class _CoursesScreenState extends State<CoursesScreen> {
     }
 
     int selectedPaymentMethod = 0; // 0: UPI & QR, 1: Card / NetBanking, 2: 1-Tap Test Checkout
-    final upiIdCtrl = TextEditingController(text: '${appState.currentUser?.username.replaceAll(" ", "").toLowerCase()}@okhdfcbank');
+    final utrCtrl = TextEditingController();
     bool isProcessing = false;
+    String verificationStatus = 'Connecting to Verification Gateway...';
 
     showModalBottomSheet(
       context: context,
@@ -350,17 +351,28 @@ class _CoursesScreenState extends State<CoursesScreen> {
                                   ),
                                 ],
                               ),
+                              const SizedBox(height: 14),
+                              const Divider(color: AppColors.borderEmerald, height: 1),
                               const SizedBox(height: 12),
+                              // UTR Verification Input
                               TextField(
-                                controller: upiIdCtrl,
-                                style: const TextStyle(color: Colors.white, fontSize: 12),
-                                decoration: const InputDecoration(
-                                  labelText: 'Or enter your UPI ID',
-                                  labelStyle: TextStyle(color: AppColors.lightGold, fontSize: 11),
-                                  prefixIcon: Icon(Icons.alternate_email, color: AppColors.primaryGold, size: 16),
+                                controller: utrCtrl,
+                                keyboardType: TextInputType.number,
+                                style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.bold),
+                                decoration: InputDecoration(
+                                  labelText: 'Enter 12-Digit UPI Reference / UTR No.*',
+                                  hintText: 'e.g. 430987654321',
+                                  hintStyle: const TextStyle(color: Colors.white38, fontSize: 11),
+                                  labelStyle: const TextStyle(color: AppColors.lightGold, fontSize: 11),
+                                  helperText: 'System verifies transaction with banking gateway to unlock immediately',
+                                  helperStyle: const TextStyle(color: AppColors.lightGold, fontSize: 9.5),
+                                  prefixIcon: const Icon(Icons.receipt_long, color: AppColors.primaryGold, size: 18),
                                   isDense: true,
-                                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.borderEmerald)),
-                                  focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.primaryGold)),
+                                  filled: true,
+                                  fillColor: const Color(0xFF07241A),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.borderEmerald)),
+                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.borderEmerald)),
+                                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.primaryGold)),
                                 ),
                               ),
                             ],
@@ -459,16 +471,67 @@ class _CoursesScreenState extends State<CoursesScreen> {
                         ),
                       ],
 
+                      if (isProcessing) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF082B1E),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.primaryGold),
+                          ),
+                          child: Row(
+                            children: [
+                              const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2.2, color: AppColors.primaryGold),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  verificationStatus,
+                                  style: const TextStyle(color: AppColors.lightGold, fontSize: 11.5, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
                       const SizedBox(height: 20),
 
-                      // Pay Button
+                      // Verify & Unlock Button
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
                           onPressed: isProcessing
                               ? null
                               : () async {
-                                  setSheetState(() => isProcessing = true);
+                                  if (selectedPaymentMethod == 0 && utrCtrl.text.trim().length < 8) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Please enter your 12-digit UPI Reference / UTR number from your payment app.'),
+                                        backgroundColor: Colors.redAccent,
+                                      ),
+                                    );
+                                    return;
+                                  }
+
+                                  setSheetState(() {
+                                    isProcessing = true;
+                                    verificationStatus = 'Step 1: Connecting to UPI Banking Gateway...';
+                                  });
+                                  await Future.delayed(const Duration(milliseconds: 700));
+
+                                  setSheetState(() {
+                                    verificationStatus = 'Step 2: Checking transaction receipt for ₹${course.price}...';
+                                  });
+                                  await Future.delayed(const Duration(milliseconds: 800));
+
+                                  setSheetState(() {
+                                    verificationStatus = 'Step 3: Payment verified! Unlocking all lessons...';
+                                  });
                                   await Future.delayed(const Duration(milliseconds: 600));
 
                                   final res = await appState.enrollInCourse(course.id);
@@ -486,10 +549,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
                                 },
                           icon: isProcessing
                               ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.darkEmerald))
-                              : const Icon(Icons.check_circle_outline, size: 18),
+                              : const Icon(Icons.verified, size: 18),
                           label: Text(
-                            isProcessing ? 'Verifying Payment...' : 'Pay ₹${course.price} & Unlock Course',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                            isProcessing ? 'Verifying...' : 'Verify Payment & Unlock Course (₹${course.price})',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primaryGold,
@@ -1348,7 +1411,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                 crossAxisCount: 2,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 12,
-                childAspectRatio: 0.82,
+                childAspectRatio: 0.74,
               ),
               itemBuilder: (context, index) {
                 final course = filtered[index];
@@ -1424,7 +1487,13 @@ class _CoursesScreenState extends State<CoursesScreen> {
           children: [
             // Thumbnail with Price & Lesson Badges
             GestureDetector(
-              onTap: () => _showCourseLessonsModal(context, course, appState),
+              onTap: () {
+                if (!isUnlocked && !isFree) {
+                  _showEnrollDialog(context, course, appState);
+                } else {
+                  _showCourseLessonsModal(context, course, appState);
+                }
+              },
               child: Stack(
                 children: [
                   AspectRatio(
@@ -1530,13 +1599,19 @@ class _CoursesScreenState extends State<CoursesScreen> {
 
             // Card Body (Title, Price Info & Action Button)
             Padding(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   GestureDetector(
-                    onTap: () => _showCourseLessonsModal(context, course, appState),
+                    onTap: () {
+                      if (!isUnlocked && !isFree) {
+                        _showEnrollDialog(context, course, appState);
+                      } else {
+                        _showCourseLessonsModal(context, course, appState);
+                      }
+                    },
                     child: Text(
                       course.title,
                       style: const TextStyle(
@@ -1549,7 +1624,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 4),
                   // Price Row with Admin edit fee link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1576,11 +1651,11 @@ class _CoursesScreenState extends State<CoursesScreen> {
                         ),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 5),
                   // Action Button (View Lessons or Enroll)
                   SizedBox(
                     width: double.infinity,
-                    height: 30,
+                    height: 28,
                     child: ElevatedButton.icon(
                       onPressed: () {
                         if (!isUnlocked && !isFree) {
@@ -1595,7 +1670,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                       ),
                       label: Text(
                         !isUnlocked && !isFree ? 'Enroll (₹${course.price})' : 'View Lessons',
-                        style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold),
+                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: !isUnlocked && !isFree

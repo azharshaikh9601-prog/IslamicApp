@@ -341,7 +341,7 @@ END;");
         {
             using var scope = _scopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<IslamicAppContext>();
-            var query = context.Playlists.AsQueryable();
+            var query = context.Playlists.Include(p => p.Videos).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(topic))
                 query = query.Where(p => p.Category.ToLower() == topic.ToLower() || p.TopicKey.ToLower() == topic.ToLower());
@@ -364,7 +364,7 @@ END;");
         {
             using var scope = _scopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<IslamicAppContext>();
-            return await context.Playlists.FirstOrDefaultAsync(p => p.Id == id);
+            return await context.Playlists.Include(p => p.Videos).FirstOrDefaultAsync(p => p.Id == id);
         }
         catch
         {
@@ -387,7 +387,7 @@ END;");
         {
             using var scope = _scopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<IslamicAppContext>();
-            var query = context.Courses.AsQueryable();
+            var query = context.Courses.Include(c => c.Lessons).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(category) && category != "all")
                 query = query.Where(c => c.Category.ToLower() == category.ToLower());

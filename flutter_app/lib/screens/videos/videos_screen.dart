@@ -256,11 +256,21 @@ class _VideosScreenState extends State<VideosScreen> {
     ValueChanged<List<VideoModel>> onConfirmed,
   ) {
     final selected = List<VideoModel>.from(initiallySelected);
+    String dialogSearchQuery = '';
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
+          final displayedVideos = dialogSearchQuery.trim().isEmpty
+              ? allVideos
+              : allVideos.where((v) {
+                  final q = dialogSearchQuery.toLowerCase();
+                  return v.title.toLowerCase().contains(q) ||
+                      v.category.toLowerCase().contains(q) ||
+                      v.description.toLowerCase().contains(q);
+                }).toList();
+
           return AlertDialog(
             backgroundColor: const Color(0xFF041E16),
             shape: RoundedRectangleBorder(
@@ -289,58 +299,97 @@ class _VideosScreenState extends State<VideosScreen> {
             ),
             content: SizedBox(
               width: 460,
-              height: 420,
-              child: allVideos.isEmpty
-                  ? const Center(
-                      child: Text('No uploaded videos available.', style: TextStyle(color: Colors.white70)),
-                    )
-                  : ListView.separated(
-                      itemCount: allVideos.length,
-                      separatorBuilder: (_, __) => const Divider(color: AppColors.borderEmerald, height: 1),
-                      itemBuilder: (ctx, idx) {
-                        final v = allVideos[idx];
-                        final isChecked = selected.any((s) => s.id == v.id);
-
-                        return CheckboxListTile(
-                          activeColor: AppColors.primaryGold,
-                          checkColor: AppColors.darkEmerald,
-                          tileColor: isChecked ? AppColors.surfaceEmerald.withOpacity(0.3) : null,
-                          dense: true,
-                          value: isChecked,
-                          onChanged: (val) {
-                            setDialogState(() {
-                              if (val == true) {
-                                selected.add(v);
-                              } else {
-                                selected.removeWhere((s) => s.id == v.id);
-                              }
-                            });
-                          },
-                          secondary: ClipRRect(
-                            borderRadius: BorderRadius.circular(6),
-                            child: SizedBox(
-                              width: 50,
-                              height: 35,
-                              child: Image.network(
-                                v.thumbnailUrl,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(color: Colors.white12),
-                              ),
-                            ),
-                          ),
-                          title: Text(
-                            v.title,
-                            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          subtitle: Text(
-                            '${v.duration} • ${v.category}',
-                            style: const TextStyle(color: AppColors.darkTextMuted, fontSize: 10),
-                          ),
-                        );
-                      },
+              height: 460,
+              child: Column(
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceEmerald,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.borderEmerald),
                     ),
+                    child: TextField(
+                      style: const TextStyle(color: Colors.white, fontSize: 12.5),
+                      onChanged: (val) {
+                        setDialogState(() {
+                          dialogSearchQuery = val;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Search video by title or category...',
+                        hintStyle: const TextStyle(color: Colors.white38, fontSize: 11.5),
+                        prefixIcon: const Icon(Icons.search, color: AppColors.primaryGold, size: 18),
+                        suffixIcon: dialogSearchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.close, color: Colors.white54, size: 16),
+                                onPressed: () {
+                                  setDialogState(() {
+                                    dialogSearchQuery = '';
+                                  });
+                                },
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 9),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: displayedVideos.isEmpty
+                        ? const Center(
+                            child: Text('No videos match your search.', style: TextStyle(color: Colors.white70)),
+                          )
+                        : ListView.separated(
+                            itemCount: displayedVideos.length,
+                            separatorBuilder: (_, __) => const Divider(color: AppColors.borderEmerald, height: 1),
+                            itemBuilder: (ctx, idx) {
+                              final v = displayedVideos[idx];
+                              final isChecked = selected.any((s) => s.id == v.id);
+
+                              return CheckboxListTile(
+                                activeColor: AppColors.primaryGold,
+                                checkColor: AppColors.darkEmerald,
+                                tileColor: isChecked ? AppColors.surfaceEmerald.withOpacity(0.3) : null,
+                                dense: true,
+                                value: isChecked,
+                                onChanged: (val) {
+                                  setDialogState(() {
+                                    if (val == true) {
+                                      selected.add(v);
+                                    } else {
+                                      selected.removeWhere((s) => s.id == v.id);
+                                    }
+                                  });
+                                },
+                                secondary: ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: SizedBox(
+                                    width: 50,
+                                    height: 35,
+                                    child: Image.network(
+                                      v.thumbnailUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Container(color: Colors.white12),
+                                    ),
+                                  ),
+                                ),
+                                title: Text(
+                                  v.title,
+                                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                subtitle: Text(
+                                  '${v.duration} • ${v.category}',
+                                  style: const TextStyle(color: AppColors.darkTextMuted, fontSize: 10),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
             ),
             actions: [
               TextButton(
@@ -893,6 +942,47 @@ class _VideosScreenState extends State<VideosScreen> {
                             ),
                           ),
                         ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // 3.5. Search Bar for Lessons & Playlists
+                    Container(
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceEmerald,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.borderEmerald),
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                        onChanged: (val) {
+                          setState(() {
+                            _searchQuery = val;
+                          });
+                        },
+                        decoration: InputDecoration(
+                          hintText: _activeView == 'playlists'
+                              ? 'Search playlists (e.g. Namaz, Wudu, Masail)...'
+                              : 'Search video lessons by title...',
+                          hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
+                          prefixIcon: const Icon(Icons.search, color: AppColors.primaryGold, size: 18),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.close, color: Colors.white54, size: 16),
+                                  onPressed: () {
+                                    setState(() {
+                                      _searchController.clear();
+                                      _searchQuery = '';
+                                    });
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                        ),
                       ),
                     ),
 

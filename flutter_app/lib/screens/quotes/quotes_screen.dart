@@ -14,6 +14,7 @@ class QuotesScreen extends StatefulWidget {
 
 class _QuotesScreenState extends State<QuotesScreen> {
   void _shareQuote(QuoteModel quote) {
+    AppStateService().incrementQuoteShares(quote.id);
     Share.share(
       '🌙 ${quote.category} | Hafiz Hasnain Jaani\n\n'
       '${quote.arabic}\n\n'
@@ -21,6 +22,127 @@ class _QuotesScreenState extends State<QuotesScreen> {
       'English: ${quote.english}\n\n'
       '📖 Reference: ${quote.reference}\n\n'
       'Official App: https://hafizhasnainjaani.com',
+    );
+  }
+
+  // Admin Dialog: Edit Quote
+  void _showEditQuoteDialog(BuildContext context, QuoteModel quote, AppStateService appState) {
+    final catCtrl = TextEditingController(text: quote.category);
+    final arabicCtrl = TextEditingController(text: quote.arabic);
+    final urduCtrl = TextEditingController(text: quote.urdu);
+    final engCtrl = TextEditingController(text: quote.english);
+    final refCtrl = TextEditingController(text: quote.reference);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.darkEmerald,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: AppColors.primaryGold, width: 1.5),
+        ),
+        title: Row(
+          children: const [
+            Icon(Icons.edit_note, color: AppColors.primaryGold),
+            SizedBox(width: 8),
+            Text('Admin: Edit Quote', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: catCtrl,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+                decoration: const InputDecoration(labelText: 'Category', labelStyle: TextStyle(color: AppColors.lightGold)),
+              ),
+              TextField(
+                controller: arabicCtrl,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+                decoration: const InputDecoration(labelText: 'Arabic Text', labelStyle: TextStyle(color: AppColors.lightGold)),
+                textDirection: TextDirection.rtl,
+              ),
+              TextField(
+                controller: urduCtrl,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+                decoration: const InputDecoration(labelText: 'Urdu Translation', labelStyle: TextStyle(color: AppColors.lightGold)),
+                textDirection: TextDirection.rtl,
+              ),
+              TextField(
+                controller: engCtrl,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+                decoration: const InputDecoration(labelText: 'English Translation', labelStyle: TextStyle(color: AppColors.lightGold)),
+              ),
+              TextField(
+                controller: refCtrl,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+                decoration: const InputDecoration(labelText: 'Hadith / Book Reference', labelStyle: TextStyle(color: AppColors.lightGold)),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: Colors.white70))),
+          ElevatedButton(
+            onPressed: () {
+              final updated = quote.copyWith(
+                category: catCtrl.text.trim(),
+                arabic: arabicCtrl.text.trim(),
+                urdu: urduCtrl.text.trim(),
+                english: engCtrl.text.trim(),
+                reference: refCtrl.text.trim(),
+              );
+              appState.updateQuote(updated);
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('✓ Quote updated successfully!'), backgroundColor: AppColors.darkEmerald),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryGold, foregroundColor: AppColors.darkEmerald),
+            child: const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Admin Dialog: Confirm Delete Quote
+  void _confirmDeleteQuote(BuildContext context, QuoteModel quote, AppStateService appState) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF041E16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Colors.redAccent, width: 1.5),
+        ),
+        title: Row(
+          children: const [
+            Icon(Icons.warning_amber_rounded, color: Colors.redAccent),
+            SizedBox(width: 8),
+            Text('Delete Quote?', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to permanently delete this Islamic quote from the app?',
+          style: TextStyle(color: Colors.white70, fontSize: 13),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: Colors.white70))),
+          ElevatedButton(
+            onPressed: () {
+              appState.deleteQuote(quote.id);
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Quote deleted.'), backgroundColor: Colors.redAccent),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+            child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -379,7 +501,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
                 separatorBuilder: (_, __) => const SizedBox(height: 16),
                 itemBuilder: (context, index) {
                   final quote = quotes[index];
-                  return _buildQuoteCard(context, quote);
+                  return _buildQuoteCard(context, quote, appState);
                 },
               ),
             ),
@@ -389,7 +511,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
     );
   }
 
-  Widget _buildQuoteCard(BuildContext context, QuoteModel quote) {
+  Widget _buildQuoteCard(BuildContext context, QuoteModel quote, AppStateService appState) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -400,7 +522,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Category & Save Poster Button
+          // Category, Edit/Delete (Admin Only) & Save Poster Button
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -420,21 +542,44 @@ class _QuotesScreenState extends State<QuotesScreen> {
                   ),
                 ),
               ),
-              ElevatedButton.icon(
-                onPressed: () => _showPosterDialog(quote),
-                icon: const Icon(Icons.image_outlined, size: 14),
-                label: const Text('Status Poster'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.surfaceEmerald,
-                  foregroundColor: AppColors.lightGold,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    side: const BorderSide(color: AppColors.borderEmerald),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Admin-Only Edit & Delete buttons
+                  if (appState.isAdmin) ...[
+                    IconButton(
+                      icon: const Icon(Icons.edit, size: 16, color: AppColors.primaryGold),
+                      tooltip: 'Edit Quote (Admin)',
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      padding: EdgeInsets.zero,
+                      onPressed: () => _showEditQuoteDialog(context, quote, appState),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 16, color: Colors.redAccent),
+                      tooltip: 'Delete Quote (Admin)',
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      padding: EdgeInsets.zero,
+                      onPressed: () => _confirmDeleteQuote(context, quote, appState),
+                    ),
+                    const SizedBox(width: 4),
+                  ],
+                  ElevatedButton.icon(
+                    onPressed: () => _showPosterDialog(quote),
+                    icon: const Icon(Icons.image_outlined, size: 14),
+                    label: const Text('Status Poster'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.surfaceEmerald,
+                      foregroundColor: AppColors.lightGold,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        side: const BorderSide(color: AppColors.borderEmerald),
+                      ),
+                      textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                      elevation: 0,
+                    ),
                   ),
-                  textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                  elevation: 0,
-                ),
+                ],
               ),
             ],
           ),
@@ -492,21 +637,75 @@ class _QuotesScreenState extends State<QuotesScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                '— ${quote.reference}',
-                style: const TextStyle(
-                  color: AppColors.darkTextMuted,
-                  fontSize: 11,
-                  fontStyle: FontStyle.italic,
+              Expanded(
+                child: Text(
+                  '— ${quote.reference}',
+                  style: const TextStyle(
+                    color: AppColors.darkTextMuted,
+                    fontSize: 11,
+                    fontStyle: FontStyle.italic,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.share, color: AppColors.primaryGold, size: 18),
-                onPressed: () => _shareQuote(quote),
-                tooltip: 'Share Quote',
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      quote.isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                      color: quote.isBookmarked ? AppColors.primaryGold : Colors.white70,
+                      size: 19,
+                    ),
+                    onPressed: () => appState.toggleQuoteBookmark(quote.id),
+                    tooltip: quote.isBookmarked ? 'Saved to Bookmarks' : 'Save / Bookmark',
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.share, color: AppColors.primaryGold, size: 18),
+                    onPressed: () => _shareQuote(quote),
+                    tooltip: 'Share Quote',
+                  ),
+                ],
               ),
             ],
           ),
+
+          // Admin-Only Metrics Bar (Shares & Saves Count - Only shows to Admin)
+          if (appState.isAdmin) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF02130C),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.primaryGold.withOpacity(0.35)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.shield_outlined, color: AppColors.primaryGold, size: 13),
+                  const SizedBox(width: 5),
+                  const Text(
+                    '[Admin Only] ',
+                    style: TextStyle(color: AppColors.primaryGold, fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                  const Icon(Icons.share, color: Colors.tealAccent, size: 12),
+                  const SizedBox(width: 3),
+                  Text(
+                    '${quote.shares} Shares',
+                    style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(width: 12),
+                  const Icon(Icons.bookmark, color: Colors.amberAccent, size: 12),
+                  const SizedBox(width: 3),
+                  Text(
+                    '${quote.saves} Saved',
+                    style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

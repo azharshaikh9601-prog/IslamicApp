@@ -349,6 +349,39 @@ class AppStateService extends ChangeNotifier {
     await _api.createQuote(quote);
   }
 
+  Future<void> updateQuote(QuoteModel quote) async {
+    final idx = _quotes.indexWhere((q) => q.id == quote.id);
+    if (idx >= 0) {
+      _quotes[idx] = quote;
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteQuote(String quoteId) async {
+    _quotes.removeWhere((q) => q.id == quoteId);
+    notifyListeners();
+  }
+
+  void incrementQuoteShares(String quoteId) {
+    final idx = _quotes.indexWhere((q) => q.id == quoteId);
+    if (idx >= 0) {
+      final q = _quotes[idx];
+      _quotes[idx] = q.copyWith(shares: q.shares + 1);
+      notifyListeners();
+    }
+  }
+
+  void toggleQuoteBookmark(String quoteId) {
+    final idx = _quotes.indexWhere((q) => q.id == quoteId);
+    if (idx >= 0) {
+      final q = _quotes[idx];
+      final newBookmarked = !q.isBookmarked;
+      final newSaves = newBookmarked ? q.saves + 1 : (q.saves > 0 ? q.saves - 1 : 0);
+      _quotes[idx] = q.copyWith(isBookmarked: newBookmarked, saves: newSaves);
+      notifyListeners();
+    }
+  }
+
   // Bookmarks
   final Set<String> _bookmarkedVideoIds = {};
   Set<String> get bookmarkedVideoIds => _bookmarkedVideoIds;
