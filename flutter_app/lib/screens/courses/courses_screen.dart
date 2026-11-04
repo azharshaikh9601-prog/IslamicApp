@@ -1584,23 +1584,30 @@ class _CoursesScreenState extends State<CoursesScreen> {
             const SizedBox(height: 14),
 
             // Course Cards in 2-Column Grid (matching Lesson tab)
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: filtered.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 12,
-                childAspectRatio: 0.69,
-              ),
-              itemBuilder: (context, index) {
-                final course = filtered[index];
-                return _build2ColCourseCard(context, course, appState);
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final cardWidth = (constraints.maxWidth - 10) / 2;
+                final cardHeight = (cardWidth * (10 / 16)) + 85.0;
+
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: filtered.length,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    mainAxisExtent: cardHeight,
+                  ),
+                  itemBuilder: (context, index) {
+                    final course = filtered[index];
+                    return _build2ColCourseCard(context, course, appState);
+                  },
+                );
               },
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
           ],
         );
       },
@@ -1832,11 +1839,11 @@ class _CoursesScreenState extends State<CoursesScreen> {
                         ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   // Action Button (View Lessons or Enroll)
                   SizedBox(
                     width: double.infinity,
-                    height: 28,
+                    height: 26,
                     child: ElevatedButton.icon(
                       onPressed: () {
                         if (!isUnlocked && !isFree) {
@@ -2053,16 +2060,16 @@ class _CoursesScreenState extends State<CoursesScreen> {
                             ),
                           )
                         : ListView.separated(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                             itemCount: course.lessons.length,
-                            separatorBuilder: (_, __) => const SizedBox(height: 8),
+                            separatorBuilder: (_, __) => const SizedBox(height: 6),
                             itemBuilder: (ctx, idx) {
                               final lesson = course.lessons[idx];
                               return InkWell(
                                 onTap: () => _playLessonInApp(context, lesson, course, appState),
                                 borderRadius: BorderRadius.circular(10),
                                 child: Container(
-                                  padding: const EdgeInsets.all(12),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                                   decoration: BoxDecoration(
                                     color: const Color(0xFF082218),
                                     borderRadius: BorderRadius.circular(10),

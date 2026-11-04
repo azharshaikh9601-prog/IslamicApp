@@ -1003,7 +1003,7 @@ class _VideosScreenState extends State<VideosScreen> {
                 : _buildVideosGridSliver(context, appState),
 
             const SliverToBoxAdapter(
-              child: SizedBox(height: 36),
+              child: SizedBox(height: 14),
             ),
           ],
         );
@@ -1268,14 +1268,18 @@ class _VideosScreenState extends State<VideosScreen> {
       );
     }
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardWidth = (screenWidth - 28 - 10) / 2;
+    final cardHeight = (cardWidth * (10 / 16)) + 84.0;
+
     return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       sliver: SliverGrid(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           crossAxisSpacing: 10,
-          mainAxisSpacing: 12,
-          childAspectRatio: 0.81,
+          mainAxisSpacing: 10,
+          mainAxisExtent: cardHeight,
         ),
         delegate: SliverChildBuilderDelegate(
           (context, index) {
@@ -1373,7 +1377,7 @@ class _VideosScreenState extends State<VideosScreen> {
 
             // Card Body (Title, Category / Edit link, Play button)
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 7, 8, 7),
+              padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -1392,7 +1396,7 @@ class _VideosScreenState extends State<VideosScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 2),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -1419,7 +1423,7 @@ class _VideosScreenState extends State<VideosScreen> {
                         ),
                     ],
                   ),
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 3),
                   // ▶ Play Entire Playlist Button
                   SizedBox(
                     width: double.infinity,
@@ -1437,17 +1441,20 @@ class _VideosScreenState extends State<VideosScreen> {
                         }
                       },
                       icon: const Icon(Icons.play_arrow_rounded, color: AppColors.darkEmerald, size: 14),
-                      label: const Text(
-                        'Play Entire Playlist',
-                        style: TextStyle(
-                          color: AppColors.darkEmerald,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 10.5,
+                      label: const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'Play Entire Playlist',
+                          style: TextStyle(
+                            color: AppColors.darkEmerald,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10.5,
+                          ),
                         ),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primaryGold,
-                        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -1483,14 +1490,18 @@ class _VideosScreenState extends State<VideosScreen> {
       return v.category == _selectedTopicFilter;
     }).toList();
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardWidth = (screenWidth - 28 - 10) / 2;
+    final cardHeight = (cardWidth * (10 / 16)) + 83.0;
+
     return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       sliver: SliverGrid(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           crossAxisSpacing: 10,
-          mainAxisSpacing: 12,
-          childAspectRatio: 0.84,
+          mainAxisSpacing: 10,
+          mainAxisExtent: cardHeight,
         ),
         delegate: SliverChildBuilderDelegate(
           (context, index) {
@@ -1572,7 +1583,7 @@ class _VideosScreenState extends State<VideosScreen> {
 
                     // Video Body (Title, Views, Watch button with no empty space)
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 6, 8, 7),
+                      padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
@@ -1591,7 +1602,7 @@ class _VideosScreenState extends State<VideosScreen> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 2),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -1609,23 +1620,26 @@ class _VideosScreenState extends State<VideosScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 5),
+                          const SizedBox(height: 3),
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(
                               onPressed: () => _playVideoInApp(context, video),
                               icon: const Icon(Icons.play_arrow_rounded, color: AppColors.darkEmerald, size: 14),
-                              label: const Text(
-                                'Watch Lesson',
-                                style: TextStyle(
-                                  color: AppColors.darkEmerald,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 10.5,
+                              label: const FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  'Watch Lesson',
+                                  style: TextStyle(
+                                    color: AppColors.darkEmerald,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 10.5,
+                                  ),
                                 ),
                               ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primaryGold,
-                                padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 4),
+                                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
@@ -1747,9 +1761,9 @@ class _VideosScreenState extends State<VideosScreen> {
         // Lessons List
         Expanded(
           child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             itemCount: playlist.videos.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            separatorBuilder: (_, __) => const SizedBox(height: 6),
             itemBuilder: (context, index) {
               final video = playlist.videos[index];
               final isWatched = appState.isVideoWatched(video.id);
@@ -1777,7 +1791,7 @@ class _VideosScreenState extends State<VideosScreen> {
                       );
                     },
                     child: Padding(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(6),
                       child: Row(
                         children: [
                           ClipRRect(
