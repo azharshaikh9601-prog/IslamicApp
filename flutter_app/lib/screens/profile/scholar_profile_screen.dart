@@ -252,16 +252,24 @@ class ScholarProfileScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   // WhatsApp Contact
-                  OutlinedButton.icon(
+                  ElevatedButton.icon(
                     onPressed: onOpenAskMasala,
-                    icon: const Icon(Icons.chat_bubble, color: AppColors.whatsApp, size: 18),
-                    label: const Text('Ask a Mas\'ala via WhatsApp Office'),
-                    style: OutlinedButton.styleFrom(
+                    icon: const Icon(Icons.chat_bubble_rounded, size: 19, color: Colors.white),
+                    label: const FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text('Ask a Mas\'ala via WhatsApp Office'),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF128C7E),
                       foregroundColor: Colors.white,
-                      side: const BorderSide(color: AppColors.borderEmerald),
-                      minimumSize: const Size(double.infinity, 44),
+                      minimumSize: const Size(double.infinity, 46),
+                      elevation: 2,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
+                      ),
+                      textStyle: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
                       ),
                     ),
                   ),
