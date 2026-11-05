@@ -113,12 +113,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Row(
                   children: const [
-                    Text(
-                      'Hazrat Hafiz Hasnain Jaani',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                    Flexible(
+                      child: Text(
+                        'Hazrat Hafiz Hasnain Jaani',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     SizedBox(width: 4),
@@ -212,13 +216,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: AppColors.darkTextSecondary,
-                  fontSize: 12,
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: AppColors.darkTextSecondary,
+                    fontSize: 12,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const SizedBox(width: 4),
               Icon(icon, color: color, size: 20),
             ],
           ),
@@ -384,13 +393,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 2),
                 Text(
                   question,
                   style: const TextStyle(
                     color: AppColors.darkTextSecondary,
                     fontSize: 11,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -419,7 +433,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildRegisteredUsersSection(AppStateService appState) {
     final users = appState.adminUsers;
-    final dateFormat = DateFormat('dd MMM yyyy, hh:mm a');
+    final dateFormat = DateFormat('dd MMM yyyy');
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -432,45 +446,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryGold.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(10),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryGold.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.people_alt, color: AppColors.primaryGold, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Registered Users & Accounts',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    child: const Icon(Icons.people_alt, color: AppColors.primaryGold, size: 20),
-                  ),
-                  const SizedBox(width: 10),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Registered Users & Accounts',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    Text(
+                      'Total Users in Database: ${users.length}',
+                      style: const TextStyle(
+                        color: AppColors.darkTextMuted,
+                        fontSize: 11,
                       ),
-                      Text(
-                        'Total Users in Database: ${users.length}',
-                        style: const TextStyle(
-                          color: AppColors.darkTextMuted,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
               IconButton(
                 icon: const Icon(Icons.refresh, color: AppColors.primaryGold),
                 tooltip: 'Refresh Users List',
                 onPressed: () => appState.loadAdminUsers(),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
               ),
             ],
           ),
@@ -588,6 +605,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     color: AppColors.darkTextSecondary,
                                     fontSize: 11,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ],
                             ),
@@ -598,9 +617,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       const Divider(color: Color(0xFF073024), height: 1),
                       const SizedBox(height: 8),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               const Icon(Icons.school, size: 13, color: AppColors.lightGold),
                               const SizedBox(width: 4),
@@ -610,11 +629,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                             ],
                           ),
-                          Text(
-                            u.lastLoginAt != null
-                                ? 'Last Active: ${dateFormat.format(u.lastLoginAt!.toLocal())}'
-                                : 'Registered: ${dateFormat.format(u.createdAt.toLocal())}',
-                            style: const TextStyle(color: AppColors.darkTextMuted, fontSize: 10),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              u.lastLoginAt != null
+                                  ? 'Active: ${dateFormat.format(u.lastLoginAt!.toLocal())}'
+                                  : 'Registered: ${dateFormat.format(u.createdAt.toLocal())}',
+                              style: const TextStyle(color: AppColors.darkTextMuted, fontSize: 10),
+                              textAlign: TextAlign.end,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),
