@@ -155,7 +155,9 @@ class AppStateService extends ChangeNotifier {
         lessons: old.lessons,
       );
       notifyListeners();
-      return await _api.updateCoursePrice(courseId, price: newPrice);
+      final ok = await _api.updateCoursePrice(courseId, price: newPrice);
+      await refreshCourses();
+      return ok;
     }
     return false;
   }
@@ -165,6 +167,7 @@ class AppStateService extends ChangeNotifier {
     notifyListeners();
     try {
       await _api.deleteCourse(courseId);
+      await refreshCourses();
     } catch (_) {}
     return true;
   }
@@ -209,6 +212,7 @@ class AppStateService extends ChangeNotifier {
           category: category,
           price: price,
         );
+        await refreshCourses();
       } catch (_) {}
       return true;
     }
@@ -262,10 +266,23 @@ class AppStateService extends ChangeNotifier {
   List<CourseModel> _courses = List.from(InitialData.courses);
   List<CourseModel> get courses => _courses;
 
+  Future<void> refreshCourses() async {
+    try {
+      final c = await _api.fetchCourses();
+      if (c != null && c.isNotEmpty) {
+        _courses = c;
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
   Future<void> addCourse(CourseModel course) async {
     _courses.insert(0, course);
     notifyListeners();
-    await _api.createCourse(course);
+    try {
+      await _api.createCourse(course);
+      await refreshCourses();
+    } catch (_) {}
   }
 
   Future<void> addLessonToCourse(String courseId, CourseLesson lesson) async {
@@ -293,6 +310,7 @@ class AppStateService extends ChangeNotifier {
       );
       notifyListeners();
       await _api.addLessonToCourse(courseId, lesson);
+      await refreshCourses();
     }
   }
 

@@ -20,6 +20,14 @@ class CoursesScreen extends StatefulWidget {
 class _CoursesScreenState extends State<CoursesScreen> {
   String _selectedCategory = 'all';
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AppStateService().refreshCourses();
+    });
+  }
+
   void _playLessonInApp(BuildContext context, CourseLesson lesson, CourseModel course, AppStateService appState) {
     if (!appState.isCourseUnlocked(course)) {
       _showEnrollDialog(context, course, appState);
@@ -1461,9 +1469,15 @@ class _CoursesScreenState extends State<CoursesScreen> {
           return _selectedCategory == 'all' || c.category == _selectedCategory;
         }).toList();
 
-        return ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          children: [
+        return RefreshIndicator(
+          onRefresh: () async {
+            await appState.refreshCourses();
+          },
+          color: AppColors.primaryGold,
+          backgroundColor: AppColors.darkEmerald,
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            children: [
             // Academy Header Card (Real, without fake certificate badges)
             Container(
               padding: const EdgeInsets.all(18),
@@ -1609,7 +1623,8 @@ class _CoursesScreenState extends State<CoursesScreen> {
 
             const SizedBox(height: 12),
           ],
-        );
+        ),
+      );
       },
     );
   }
@@ -1897,10 +1912,15 @@ class _CoursesScreenState extends State<CoursesScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setModalState) {
-            final isFree = course.price == 0;
-            final isUnlocked = appState.isCourseUnlocked(course);
+        return AnimatedBuilder(
+          animation: appState,
+          builder: (ctx, _) {
+            final currentCourse = appState.courses.firstWhere(
+              (c) => c.id == course.id,
+              orElse: () => course,
+            );
+            final isFree = currentCourse.price == 0;
+            final isUnlocked = appState.isCourseUnlocked(currentCourse);
 
             return Container(
               height: MediaQuery.of(context).size.height * 0.85,
@@ -1938,7 +1958,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                             width: 70,
                             height: 70,
                             child: Image.network(
-                              course.thumbnail,
+                              currentCourse.thumbnail,
                               fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) => Container(
                                 color: AppColors.surfaceEmerald,
@@ -1953,7 +1973,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                course.title,
+                                currentCourse.title,
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 15,
@@ -1962,7 +1982,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                course.urduTitle,
+                                currentCourse.urduTitle,
                                 style: AppTheme.urduStyle.copyWith(
                                   fontSize: 12.5,
                                   color: AppColors.lightGold,
@@ -1982,7 +2002,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                                     child: Text(
                                       isFree
                                           ? 'FREE COURSE'
-                                          : (isUnlocked ? '✓ UNLOCKED' : 'FEE: ₹${course.price}'),
+                                          : (isUnlocked ? '✓ UNLOCKED' : 'FEE: ₹${currentCourse.price}'),
                                       style: TextStyle(
                                         color: isUnlocked && !isFree ? Colors.white : const Color(0xFF032B1F),
                                         fontSize: 9.5,
@@ -1992,7 +2012,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    '${course.lessons.length} Lessons',
+                                    '${currentCourse.lessons.length} Lessons',
                                     style: const TextStyle(color: AppColors.darkTextMuted, fontSize: 11),
                                   ),
                                 ],
@@ -2017,8 +2037,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                           Expanded(
                             child: OutlinedButton.icon(
                               onPressed: () {
-                                Navigator.pop(ctx);
-                                _showEditCourseDialog(context, course, appState);
+                                _showEditCourseDialog(context, currentCourse, appState);
                               },
                               icon: const Icon(Icons.edit, size: 14, color: AppColors.primaryGold),
                               label: const Text('Edit / Delete Course', style: TextStyle(color: AppColors.lightGold, fontSize: 11)),
@@ -2032,8 +2051,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () {
-                                Navigator.pop(ctx);
-                                _showAddLessonDialog(context, course, appState);
+                                _showAddLessonDialog(context, currentCourse, appState);
                               },
                               icon: const Icon(Icons.add, size: 14),
                               label: const Text('Add Lesson', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
@@ -2052,7 +2070,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
 
                   // Lessons List
                   Expanded(
-                    child: course.lessons.isEmpty
+                    child: currentCourse.lessons.isEmpty
                         ? const Center(
                             child: Text(
                               'No lessons published yet.',
@@ -2061,12 +2079,12 @@ class _CoursesScreenState extends State<CoursesScreen> {
                           )
                         : ListView.separated(
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            itemCount: course.lessons.length,
+                            itemCount: currentCourse.lessons.length,
                             separatorBuilder: (_, __) => const SizedBox(height: 6),
                             itemBuilder: (ctx, idx) {
-                              final lesson = course.lessons[idx];
+                              final lesson = currentCourse.lessons[idx];
                               return InkWell(
-                                onTap: () => _playLessonInApp(context, lesson, course, appState),
+                                onTap: () => _playLessonInApp(context, lesson, currentCourse, appState),
                                 borderRadius: BorderRadius.circular(10),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),

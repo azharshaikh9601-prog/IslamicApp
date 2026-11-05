@@ -51,7 +51,7 @@ class _AskMasalaScreenState extends State<AskMasalaScreen> {
         '--- Submitted via Hafiz Hasnain Jaani Official Islamic App ---';
 
     final encoded = Uri.encodeComponent(text);
-    final uri = Uri.parse('https://wa.me/919876543210?text=$encoded');
+    final uri = Uri.parse('https://wa.me/919241299847?text=$encoded');
 
     try {
       if (await canLaunchUrl(uri)) {
@@ -357,7 +357,7 @@ class _AskMasalaScreenState extends State<AskMasalaScreen> {
               onPressed: _isSubmitting ? null : _submitToWhatsApp,
               icon: const Icon(Icons.chat_bubble_rounded, size: 18),
               label: Text(
-                _isSubmitting ? 'Opening WhatsApp...' : 'Send Question via WhatsApp',
+                _isSubmitting ? 'Opening WhatsApp...' : 'Send Question via WhatsApp (+91 92412 99847)',
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
               ),
               style: ElevatedButton.styleFrom(

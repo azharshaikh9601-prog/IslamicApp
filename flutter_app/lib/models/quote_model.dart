@@ -3,6 +3,7 @@ class QuoteModel {
   final String category;
   final String arabic;
   final String urdu;
+  final String hindi;
   final String english;
   final String reference;
   final String theme;
@@ -16,6 +17,7 @@ class QuoteModel {
     required this.category,
     required this.arabic,
     required this.urdu,
+    this.hindi = '',
     required this.english,
     required this.reference,
     this.theme = 'theme-emerald',
@@ -29,6 +31,7 @@ class QuoteModel {
     String? category,
     String? arabic,
     String? urdu,
+    String? hindi,
     String? english,
     String? reference,
     String? theme,
@@ -42,6 +45,7 @@ class QuoteModel {
       category: category ?? this.category,
       arabic: arabic ?? this.arabic,
       urdu: urdu ?? this.urdu,
+      hindi: hindi ?? this.hindi,
       english: english ?? this.english,
       reference: reference ?? this.reference,
       theme: theme ?? this.theme,
@@ -58,6 +62,7 @@ class QuoteModel {
       category: json['category'] ?? 'Daily Hadith',
       arabic: json['arabic'] ?? '',
       urdu: json['urdu'] ?? '',
+      hindi: json['hindi'] ?? '',
       english: json['english'] ?? '',
       reference: json['reference'] ?? '',
       theme: json['theme'] ?? 'theme-emerald',
@@ -74,6 +79,7 @@ class QuoteModel {
       'category': category,
       'arabic': arabic,
       'urdu': urdu,
+      'hindi': hindi,
       'english': english,
       'reference': reference,
       'theme': theme,

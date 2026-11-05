@@ -19,6 +19,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
       '🌙 ${quote.category} | Hafiz Hasnain Jaani\n\n'
       '${quote.arabic}\n\n'
       'اردو: ${quote.urdu}\n\n'
+      '${quote.hindi.isNotEmpty ? "हिंदी: ${quote.hindi}\n\n" : ""}'
       'English: ${quote.english}\n\n'
       '📖 Reference: ${quote.reference}\n\n'
       'Official App: https://hafizhasnainjaani.com',
@@ -30,6 +31,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
     final catCtrl = TextEditingController(text: quote.category);
     final arabicCtrl = TextEditingController(text: quote.arabic);
     final urduCtrl = TextEditingController(text: quote.urdu);
+    final hindiCtrl = TextEditingController(text: quote.hindi);
     final engCtrl = TextEditingController(text: quote.english);
     final refCtrl = TextEditingController(text: quote.reference);
 
@@ -66,8 +68,13 @@ class _QuotesScreenState extends State<QuotesScreen> {
               TextField(
                 controller: urduCtrl,
                 style: const TextStyle(color: Colors.white, fontSize: 13),
-                decoration: const InputDecoration(labelText: 'Urdu Translation', labelStyle: TextStyle(color: AppColors.lightGold)),
+                decoration: const InputDecoration(labelText: 'Urdu Translation (اردو ترجمہ)', labelStyle: TextStyle(color: AppColors.lightGold)),
                 textDirection: TextDirection.rtl,
+              ),
+              TextField(
+                controller: hindiCtrl,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+                decoration: const InputDecoration(labelText: 'Hindi Translation (हिंदी अनुवाद)', labelStyle: TextStyle(color: AppColors.lightGold)),
               ),
               TextField(
                 controller: engCtrl,
@@ -90,6 +97,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
                 category: catCtrl.text.trim(),
                 arabic: arabicCtrl.text.trim(),
                 urdu: urduCtrl.text.trim(),
+                hindi: hindiCtrl.text.trim(),
                 english: engCtrl.text.trim(),
                 reference: refCtrl.text.trim(),
               );
@@ -301,6 +309,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
   void _showPostQuoteDialog(BuildContext context, AppStateService appState) {
     final arabicCtrl = TextEditingController();
     final urduCtrl = TextEditingController();
+    final hindiCtrl = TextEditingController();
     final engCtrl = TextEditingController();
     final refCtrl = TextEditingController();
     String category = 'Daily Hadith';
@@ -342,6 +351,15 @@ class _QuotesScreenState extends State<QuotesScreen> {
                   style: const TextStyle(color: Colors.white, fontSize: 13),
                   decoration: const InputDecoration(
                     labelText: 'Urdu Translation (اردو ترجمہ)',
+                    labelStyle: TextStyle(color: AppColors.lightGold),
+                    enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.borderEmerald)),
+                  ),
+                ),
+                TextField(
+                  controller: hindiCtrl,
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  decoration: const InputDecoration(
+                    labelText: 'Hindi Translation (हिंदी अनुवाद)',
                     labelStyle: TextStyle(color: AppColors.lightGold),
                     enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.borderEmerald)),
                   ),
@@ -400,6 +418,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
                   category: category,
                   arabic: arabicCtrl.text.trim().isEmpty ? 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ' : arabicCtrl.text.trim(),
                   urdu: urduCtrl.text.trim(),
+                  hindi: hindiCtrl.text.trim(),
                   english: engCtrl.text.trim(),
                   reference: refCtrl.text.trim().isEmpty ? 'Islamic Reference' : refCtrl.text.trim(),
                   likes: 1,
@@ -610,28 +629,97 @@ class _QuotesScreenState extends State<QuotesScreen> {
 
           const SizedBox(height: 12),
 
-          // Urdu Translation
-          Text(
-            quote.urdu,
-            style: AppTheme.urduStyle.copyWith(
-              fontSize: 15,
-              color: AppColors.lightGold,
-              height: 1.6,
-            ),
-            textDirection: TextDirection.rtl,
+          // 1. Urdu Translation (اردو)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Align(
+                alignment: Alignment.centerRight,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryGold.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'اردو',
+                    style: TextStyle(color: AppColors.brightGold, fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                quote.urdu,
+                style: AppTheme.urduStyle.copyWith(
+                  fontSize: 15,
+                  color: AppColors.lightGold,
+                  height: 1.6,
+                ),
+                textDirection: TextDirection.rtl,
+              ),
+            ],
           ),
 
-          const SizedBox(height: 8),
-
-          // English Translation
-          Text(
-            quote.english,
-            style: const TextStyle(
-              color: AppColors.darkTextSecondary,
-              fontSize: 12.5,
-              height: 1.4,
+          if (quote.hindi.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            // 2. Hindi Translation (हिंदी)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                  decoration: BoxDecoration(
+                    color: Colors.orangeAccent.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'हिंदी',
+                    style: TextStyle(color: Color(0xFFFDBA74), fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  quote.hindi,
+                  style: const TextStyle(
+                    color: Color(0xFFF1F5F9),
+                    fontSize: 13,
+                    height: 1.5,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
-          ),
+          ],
+
+          if (quote.english.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            // 3. English Translation
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                  decoration: BoxDecoration(
+                    color: Colors.blueAccent.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'English',
+                    style: TextStyle(color: Color(0xFF93C5FD), fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  quote.english,
+                  style: const TextStyle(
+                    color: AppColors.darkTextSecondary,
+                    fontSize: 12.5,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ],
 
           const SizedBox(height: 12),
 

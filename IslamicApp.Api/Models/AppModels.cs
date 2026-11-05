@@ -82,6 +82,7 @@ public class QuoteItem
     public string Category { get; set; } = "Daily Hadith";
     public string Arabic { get; set; } = string.Empty;
     public string Urdu { get; set; } = string.Empty;
+    public string Hindi { get; set; } = string.Empty;
     public string English { get; set; } = string.Empty;
     public string Reference { get; set; } = string.Empty;
     public string Theme { get; set; } = "theme-emerald";

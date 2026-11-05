@@ -12,21 +12,12 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  final TextEditingController _broadcastController = TextEditingController();
-
   @override
   void initState() {
     super.initState();
-    _broadcastController.text = 'Hafiz Hasnain Jaani Official Islamic App';
     WidgetsBinding.instance.addPostFrameCallback((_) {
       AppStateService().loadAdminUsers();
     });
-  }
-
-  @override
-  void dispose() {
-    _broadcastController.dispose();
-    super.dispose();
   }
 
   Future<void> _launchYouTubeStudio() async {
@@ -69,12 +60,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
               const SizedBox(height: 20),
 
-              // 3. Live Broadcast Announcement Manager
-              _buildBroadcastManager(appState),
-
-              const SizedBox(height: 20),
-
-              // 4. Content Distribution Progress
+              // 3. Content Distribution Progress
               _buildContentDistribution(),
 
               const SizedBox(height: 20),
@@ -251,54 +237,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               fontSize: 10,
               fontWeight: FontWeight.w600,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBroadcastManager(AppStateService appState) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.darkCard,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.borderEmerald),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: const [
-                  Icon(Icons.admin_panel_settings_rounded,
-                      color: AppColors.primaryGold, size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'Admin Posting Permissions',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              Switch(
-                value: appState.isAdmin,
-                activeColor: AppColors.primaryGold,
-                onChanged: (val) {
-                  appState.setAdminMode(val);
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'When enabled, creation buttons appear across Quotes, Lessons, and Courses allowing the Admin to post content.',
-            style: TextStyle(color: AppColors.darkTextSecondary, fontSize: 12),
           ),
         ],
       ),

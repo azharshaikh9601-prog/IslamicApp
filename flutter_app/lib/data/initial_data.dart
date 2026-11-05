@@ -19,7 +19,7 @@ class InitialData {
     'bio':
         'Promoting authentic Islamic knowledge based on the Holy Quran, Sunnah, and Fiqh-e-Hanafi. Dedicated to teaching practical Namaz, Wudu, Quranic Tajweed, Masail of daily life, and spreading spiritual peace through Naats and Bayanaat.',
     'location': 'Purnia, Bihar, India',
-    'whatsapp': '+919876543210',
+    'whatsapp': '+919241299847',
     'email': 'contact@hafizhasnainjaani.com',
   };
 
@@ -3240,6 +3240,7 @@ class InitialData {
       category: 'Daily Hadith',
       arabic: 'خَيْرُكُمْ مَنْ تَعَلَّمَ الْقُرْآنَ وَعَلَّمَهُ',
       urdu: 'تم میں سب سے بہترین شخص وہ ہے جو قرآن سیکھے اور دوسروں کو سکھائے۔',
+      hindi: 'तुम में सबसे बेहतर इंसान वह है जो क़ुरआन सीखे और दूसरों को सिखाए।',
       english: 'The best among you are those who learn the Quran and teach it to others.',
       reference: 'Sahih Al-Bukhari 5027',
       theme: 'theme-emerald',
@@ -3250,6 +3251,7 @@ class InitialData {
       category: 'Quranic Ayah',
       arabic: 'أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ',
       urdu: 'سن لو! اللہ کے ذکر ہی سے دلوں کو اطمینان اور سکون حاصل ہوتا ہے۔',
+      hindi: 'याद रखो! अल्लाह के ज़िक्र से ही दिलों को सुकून और इत्मीनान मिलता है।',
       english: 'Unquestionably, by the remembrance of Allah hearts are assured.',
       reference: "Surah Ar-Ra'd [13:28]",
       theme: 'theme-gold',
@@ -3260,6 +3262,7 @@ class InitialData {
       category: 'Golden Saying',
       arabic: 'إِنَّ الصَّلَاةَ تَنْهَىٰ عَنِ الْفَحْشَاءِ وَالْمُنكَرِ',
       urdu: 'بے شک نماز بے حیائی اور برے کاموں سے روکتی ہے۔',
+      hindi: 'बेशक नमाज़ बेहयाई और बुराई के कामों से रोकती है।',
       english: 'Indeed, prayer prohibits immorality and wrongdoing.',
       reference: 'Surah Al-Ankabut [29:45]',
       theme: 'theme-royal',
@@ -3270,6 +3273,7 @@ class InitialData {
       category: 'Daily Hadith',
       arabic: 'مَنْ صَلَّى عَلَيَّ صَلَاةً صَلَّى اللَّهُ عَلَيْهِ بِهَا عَشْرًا',
       urdu: 'جو شخص مجھ پر ایک بار درود بھیجے، اللہ تعالیٰ اس پر دس رحمتیں نازل فرماتا ہے۔',
+      hindi: 'जो शख्स मुझ पर एक बार दुरूद भेजे, अल्लाह उस पर दस रहमतें नाज़िल फरमाता है।',
       english: 'Whoever sends blessings upon me once, Allah sends ten blessings upon him.',
       reference: 'Sahih Muslim 408',
       theme: 'theme-emerald',
