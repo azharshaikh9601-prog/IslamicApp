@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
 
@@ -25,16 +26,28 @@ class _AskMasalaScreenState extends State<AskMasalaScreen> {
     super.dispose();
   }
 
-  Future<void> _submitToWhatsApp() async {
+  String _formatMessage() {
     final name = _nameCtrl.text.trim();
     final city = _cityCtrl.text.trim();
+    final q = _questionCtrl.text.trim();
+
+    return 'Assalamu Alaikum wa Rahmatullahi wa Barakatuh\n'
+        'Hazrat Hafiz Hasnain Jaani Sahab,\n\n'
+        '👤 Name / नाम: ${name.isNotEmpty ? name : "Seeker of Knowledge"}\n'
+        '📍 City / शहर: ${city.isNotEmpty ? city : "India"}\n\n'
+        '❓ Mas\'ala / सवाल:\n$q\n\n'
+        '--- Sent via Hafiz Hasnain Jaani Official Islamic App ---';
+  }
+
+  Future<void> _submitToWhatsApp() async {
     final q = _questionCtrl.text.trim();
 
     if (q.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please write your religious question or Mas’ala!'),
+          content: Text('Please write your question or Mas’ala! / कृपया अपना सवाल लिखें!'),
           backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
         ),
       );
       return;
@@ -42,14 +55,7 @@ class _AskMasalaScreenState extends State<AskMasalaScreen> {
 
     setState(() => _isSubmitting = true);
 
-    final text =
-        'السلام علیکم ورحمۃ اللہ وبرکاتہ\n\n'
-        'Hazrat Hafiz Hasnain Jaani Sahab,\n\n'
-        '👤 Name: ${name.isNotEmpty ? name : "Student of Deen"}\n'
-        '📍 City/District: ${city.isNotEmpty ? city : "India"}\n\n'
-        '📜 Mas’ala / Question:\n$q\n\n'
-        '--- Submitted via Hafiz Hasnain Jaani Official Islamic App ---';
-
+    final text = _formatMessage();
     final encoded = Uri.encodeComponent(text);
     final uri = Uri.parse('https://wa.me/919241299847?text=$encoded');
 
@@ -62,6 +68,7 @@ class _AskMasalaScreenState extends State<AskMasalaScreen> {
             const SnackBar(
               content: Text('Could not open WhatsApp. Please check your connection.'),
               backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
             ),
           );
         }
@@ -72,12 +79,36 @@ class _AskMasalaScreenState extends State<AskMasalaScreen> {
           const SnackBar(
             content: Text('Error launching WhatsApp.'),
             backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  void _copyDraftMessage() {
+    final q = _questionCtrl.text.trim();
+    if (q.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please write your question first! / पहले अपना सवाल लिखें!'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    Clipboard.setData(ClipboardData(text: _formatMessage()));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Message copied to clipboard! / संदेश कॉपी हो गया!'),
+        backgroundColor: Color(0xFF1B6B4E),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
@@ -98,7 +129,7 @@ class _AskMasalaScreenState extends State<AskMasalaScreen> {
             Icon(Icons.question_answer_rounded, color: AppColors.primaryGold, size: 20),
             SizedBox(width: 8),
             Text(
-              "Ask Mas'ala (دار الافتاء)",
+              "Ask Mas'ala (सवाल पूछें)",
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 16,
@@ -251,21 +282,23 @@ class _AskMasalaScreenState extends State<AskMasalaScreen> {
 
           // 3. Question Form
           const Text(
-            'Submit Your Mas’ala / Question',
+            'Submit Your Mas’ala / सवाल पूछें',
             style: TextStyle(
               color: Colors.white,
-              fontSize: 14,
+              fontSize: 14.5,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 10),
 
-          // Name Field
+          // Name Field (English & Hindi)
           TextField(
             controller: _nameCtrl,
             style: const TextStyle(color: Colors.white, fontSize: 13.5),
             decoration: InputDecoration(
-              labelText: 'Your Name (آپ کا نام / नाम)',
+              labelText: 'Your Name (आपका नाम)',
+              hintText: 'Enter your full name / अपना नाम लिखें',
+              hintStyle: const TextStyle(color: AppColors.darkTextMuted, fontSize: 12),
               labelStyle: const TextStyle(color: AppColors.lightGold, fontSize: 12),
               prefixIcon: const Icon(Icons.person_outline_rounded, color: AppColors.primaryGold, size: 18),
               filled: true,
@@ -288,12 +321,14 @@ class _AskMasalaScreenState extends State<AskMasalaScreen> {
 
           const SizedBox(height: 12),
 
-          // City Field
+          // City Field (English & Hindi)
           TextField(
             controller: _cityCtrl,
             style: const TextStyle(color: Colors.white, fontSize: 13.5),
             decoration: InputDecoration(
-              labelText: 'Your City / District (شہر / शहर व ज़िला)',
+              labelText: 'Your City / District (शहर व ज़िला)',
+              hintText: 'e.g. Purnia, Delhi, Patna / अपना शहर लिखें',
+              hintStyle: const TextStyle(color: AppColors.darkTextMuted, fontSize: 12),
               labelStyle: const TextStyle(color: AppColors.lightGold, fontSize: 12),
               prefixIcon: const Icon(Icons.location_on_outlined, color: AppColors.primaryGold, size: 18),
               filled: true,
@@ -316,13 +351,15 @@ class _AskMasalaScreenState extends State<AskMasalaScreen> {
 
           const SizedBox(height: 12),
 
-          // Question Field
+          // Question Field (English & Hindi)
           TextField(
             controller: _questionCtrl,
             maxLines: 5,
             style: const TextStyle(color: Colors.white, fontSize: 13.5),
             decoration: InputDecoration(
-              labelText: "Your Question / Mas'ala (مسئلہ بیان فرمائیں / अपना सवाल लिखें)",
+              labelText: "Your Question or Mas'ala (अपना सवाल या मसला लिखें)",
+              hintText: "Describe your religious question in detail...\nअपना मसला विस्तार से लिखें...",
+              hintStyle: const TextStyle(color: AppColors.darkTextMuted, fontSize: 12),
               alignLabelWithHint: true,
               labelStyle: const TextStyle(color: AppColors.lightGold, fontSize: 12),
               prefixIcon: const Padding(
@@ -349,24 +386,164 @@ class _AskMasalaScreenState extends State<AskMasalaScreen> {
 
           const SizedBox(height: 20),
 
-          // Submit via WhatsApp Button
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton.icon(
-              onPressed: _isSubmitting ? null : _submitToWhatsApp,
-              icon: const Icon(Icons.chat_bubble_rounded, size: 18),
-              label: Text(
-                _isSubmitting ? 'Opening WhatsApp...' : 'Send Question via WhatsApp (+91 92412 99847)',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.whatsApp,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          // 4. Enhanced Send via WhatsApp Option
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _isSubmitting ? null : _submitToWhatsApp,
+              borderRadius: BorderRadius.circular(16),
+              child: Ink(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF25D366), Color(0xFF128C7E)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF25D366).withOpacity(0.35),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    // Circular WhatsApp Icon
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.chat_bubble_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    // Titles
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  _isSubmitting ? 'Opening WhatsApp...' : 'Send via WhatsApp',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.2,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.25),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  'Direct',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          const Text(
+                            'Desk: +91 92412 99847 • सीधे व्हाट्सएप पर भेजें',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Forward Send Indicator
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.arrow_forward_rounded,
+                        color: Color(0xFF128C7E),
+                        size: 16,
+                      ),
+                    ),
+                  ],
                 ),
               ),
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          // Secondary Quick Actions: Copy Draft
+          Center(
+            child: TextButton.icon(
+              onPressed: _copyDraftMessage,
+              icon: const Icon(Icons.copy_rounded, size: 14, color: AppColors.lightGold),
+              label: const Text(
+                'Copy Formatted Message / संदेश कॉपी करें',
+                style: TextStyle(color: AppColors.lightGold, fontSize: 11.5, fontWeight: FontWeight.w600),
+              ),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 6),
+
+          // Privacy & Direct Desk Trust Banner
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0C241C),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.borderEmerald.withOpacity(0.6)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(top: 2),
+                  child: Icon(Icons.verified_user_rounded, color: AppColors.primaryGold, size: 16),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'Private & Confidential: Your question is sent directly to Hazrat Hafiz Hasnain Jaani\'s official WhatsApp desk (+91 92412 99847).\nसुरक्षित व गोपनीय: आपका सवाल सीधे हज़रत के आधिकारिक डेस्क पर जाएगा।',
+                    style: TextStyle(
+                      color: AppColors.darkTextMuted,
+                      fontSize: 10.5,
+                      height: 1.35,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
 
@@ -376,4 +553,3 @@ class _AskMasalaScreenState extends State<AskMasalaScreen> {
     );
   }
 }
-
