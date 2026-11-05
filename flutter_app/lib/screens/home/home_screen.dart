@@ -459,7 +459,7 @@ class HomeScreen extends StatelessWidget {
 
           // Horizontal Video Cards
           SizedBox(
-            height: 285,
+            height: 310,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: videos.take(6).length,

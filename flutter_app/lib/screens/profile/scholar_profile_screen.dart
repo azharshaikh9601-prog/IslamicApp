@@ -205,11 +205,26 @@ class ScholarProfileScreen extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        Expanded(child: _buildProfileStat(profile['subscribers'] as String, 'Subscribers')),
+                        Expanded(
+                          child: _buildProfileStat(
+                            (profile['subscribers'] as String).replaceAll(' Subscribers', ''),
+                            'Subscribers',
+                          ),
+                        ),
                         Container(height: 30, width: 1, color: AppColors.borderEmerald),
-                        Expanded(child: _buildProfileStat(profile['totalViews'] as String, 'Total Views')),
+                        Expanded(
+                          child: _buildProfileStat(
+                            (profile['totalViews'] as String).replaceAll(' Total Views', ''),
+                            'Total Views',
+                          ),
+                        ),
                         Container(height: 30, width: 1, color: AppColors.borderEmerald),
-                        Expanded(child: _buildProfileStat(profile['videosCount'] as String, 'Videos')),
+                        Expanded(
+                          child: _buildProfileStat(
+                            (profile['videosCount'] as String).replaceAll(' Videos', ''),
+                            'Videos',
+                          ),
+                        ),
                       ],
                     ),
                   ),

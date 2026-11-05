@@ -402,25 +402,30 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
             children: [
               // Modal Header
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: const [
-                      Icon(Icons.notifications_active, color: AppColors.primaryGold, size: 22),
-                      SizedBox(width: 8),
-                      Text(
-                        'New Video Notifications',
-                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                    ],
+                  const Icon(Icons.notifications_active, color: AppColors.primaryGold, size: 20),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'New Video Notifications',
+                      style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
+                  const SizedBox(width: 6),
                   TextButton.icon(
                     onPressed: () {
                       appState.markNotificationsRead();
                       Navigator.pop(ctx);
                     },
-                    icon: const Icon(Icons.done_all, size: 16, color: AppColors.lightGold),
+                    icon: const Icon(Icons.done_all, size: 15, color: AppColors.lightGold),
                     label: const Text('Mark Read', style: TextStyle(color: AppColors.lightGold, fontSize: 11)),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
                   ),
                 ],
               ),
@@ -506,16 +511,20 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                                           const Icon(Icons.visibility, size: 12, color: AppColors.lightGold),
                                           const SizedBox(width: 4),
                                           Text(video.views, style: const TextStyle(color: AppColors.lightGold, fontSize: 10.5)),
-                                          const SizedBox(width: 10),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFF133629),
-                                              borderRadius: BorderRadius.circular(4),
-                                            ),
-                                            child: Text(
-                                              video.category.toUpperCase(),
-                                              style: const TextStyle(color: AppColors.brightGold, fontSize: 8.5, fontWeight: FontWeight.bold),
+                                          const SizedBox(width: 8),
+                                          Flexible(
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF133629),
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                video.category.toUpperCase(),
+                                                style: const TextStyle(color: AppColors.brightGold, fontSize: 8.5, fontWeight: FontWeight.bold),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
                                             ),
                                           ),
                                         ],
