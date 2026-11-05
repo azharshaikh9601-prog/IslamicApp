@@ -5,6 +5,8 @@ import '../../core/theme/app_theme.dart';
 import '../../data/prayer_locations.dart';
 import '../../services/storage_service.dart';
 import '../../services/prayer_calculator_service.dart';
+import '../../services/gps_location_service.dart';
+import '../../models/prayer_location_model.dart';
 
 class ToolsScreen extends StatefulWidget {
   final int initialTabIndex;
@@ -335,10 +337,18 @@ class _ToolsScreenState extends State<ToolsScreen>
     return AnimatedBuilder(
       animation: appState,
       builder: (context, child) {
-        final location = PrayerLocationsData.locations.firstWhere(
-          (l) => l.id == appState.selectedLocationId,
-          orElse: () => PrayerLocationsData.locations.first,
-        );
+        PrayerLocation location;
+        if (appState.isGpsActive && appState.gpsLocation != null) {
+          location = appState.gpsLocation!;
+        } else {
+          location = PrayerLocationsData.locations.firstWhere(
+            (l) => l.id == appState.selectedLocationId,
+            orElse: () => PrayerLocationsData.locations.firstWhere(
+              (l) => l.id == 'in_mh_sindhudurg',
+              orElse: () => PrayerLocationsData.locations.first,
+            ),
+          );
+        }
 
         final times = PrayerCalculatorService.calculate(
           lat: location.lat,
@@ -347,9 +357,75 @@ class _ToolsScreenState extends State<ToolsScreen>
           asrFactor: appState.asrFactor,
         );
 
+        final allLocations = [
+          if (appState.gpsLocation != null) appState.gpsLocation!,
+          ...PrayerLocationsData.locations,
+        ];
+
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // GPS Location Tracking Button
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Row(
+                        children: [
+                          SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.brightGold),
+                          ),
+                          SizedBox(width: 12),
+                          Expanded(child: Text('Detecting live location via GPS/Network...')),
+                        ],
+                      ),
+                      duration: Duration(seconds: 2),
+                      backgroundColor: Color(0xFF0C241C),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                  final detected = await GpsLocationService.detectLocation();
+                  if (detected != null) {
+                    appState.setGpsLocation(detected);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('📍 Live GPS Detected: ${detected.name}. Salah times updated!'),
+                          backgroundColor: const Color(0xFF133629),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  }
+                },
+                icon: Icon(
+                  appState.isGpsActive ? Icons.my_location_rounded : Icons.gps_fixed_rounded,
+                  color: appState.isGpsActive ? AppColors.darkEmerald : AppColors.primaryGold,
+                  size: 18,
+                ),
+                label: Text(
+                  appState.isGpsActive
+                      ? 'GPS Active: ${location.name.split(',')[0]}'
+                      : 'Auto-Track Live Location (GPS)',
+                  style: TextStyle(
+                    color: appState.isGpsActive ? AppColors.darkEmerald : Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: appState.isGpsActive ? AppColors.primaryGold : const Color(0xFF061811),
+                  side: BorderSide(color: appState.isGpsActive ? AppColors.brightGold : AppColors.borderEmerald),
+                  minimumSize: const Size(double.infinity, 44),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+
             // Location Dropdown Picker
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -362,10 +438,9 @@ class _ToolsScreenState extends State<ToolsScreen>
                 child: DropdownButton<String>(
                   value: location.id,
                   dropdownColor: AppColors.darkEmerald,
-                  icon: const Icon(Icons.location_on,
-                      color: AppColors.primaryGold),
+                  icon: const Icon(Icons.location_on, color: AppColors.primaryGold),
                   isExpanded: true,
-                  items: PrayerLocationsData.locations.map((loc) {
+                  items: allLocations.map((loc) {
                     return DropdownMenuItem(
                       value: loc.id,
                       child: Text(

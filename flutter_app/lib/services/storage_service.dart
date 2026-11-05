@@ -8,6 +8,7 @@ import '../models/dhikr_model.dart';
 import '../models/playlist_model.dart';
 import '../models/course_model.dart';
 import '../models/user_model.dart';
+import '../models/prayer_location_model.dart';
 import '../data/initial_data.dart';
 import 'api_service.dart';
 
@@ -530,14 +531,27 @@ class AppStateService extends ChangeNotifier {
   // Location & Fiqh
   String _selectedLocationId = 'in_mh_ratnagiri';
   int _asrFactor = 2; // 2 = Hanafi, 1 = Shafi'i
+  PrayerLocation? _gpsLocation;
+  bool _isGpsActive = false;
 
   String get selectedLocationId => _selectedLocationId;
   int get asrFactor => _asrFactor;
+  PrayerLocation? get gpsLocation => _gpsLocation;
+  bool get isGpsActive => _isGpsActive;
 
   void setLocation(String locationId) {
     _selectedLocationId = locationId;
+    _isGpsActive = (locationId == 'gps_live' || (_gpsLocation != null && locationId == _gpsLocation!.id));
     notifyListeners();
     _api.syncSettings(locationId: locationId);
+  }
+
+  void setGpsLocation(PrayerLocation loc) {
+    _gpsLocation = loc;
+    _selectedLocationId = loc.id;
+    _isGpsActive = true;
+    notifyListeners();
+    _api.syncSettings(locationId: loc.id);
   }
 
   void setAsrFactor(int factor) {

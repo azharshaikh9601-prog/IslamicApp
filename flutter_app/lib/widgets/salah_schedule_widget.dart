@@ -5,6 +5,7 @@ import '../data/prayer_locations.dart';
 import '../models/prayer_location_model.dart';
 import '../services/prayer_calculator_service.dart';
 import '../services/storage_service.dart';
+import '../services/gps_location_service.dart';
 
 class SalahScheduleWidget extends StatefulWidget {
   const SalahScheduleWidget({super.key});
@@ -17,6 +18,7 @@ class _SalahScheduleWidgetState extends State<SalahScheduleWidget> {
   final TextEditingController _searchController = TextEditingController();
   Timer? _timer;
   String _searchFilter = '';
+  bool _isLocatingGps = false;
 
   @override
   void initState() {
@@ -32,6 +34,62 @@ class _SalahScheduleWidgetState extends State<SalahScheduleWidget> {
     _timer?.cancel();
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleGpsTracking(BuildContext context, AppStateService appState) async {
+    if (_isLocatingGps) return;
+    setState(() => _isLocatingGps = true);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.brightGold),
+            ),
+            SizedBox(width: 12),
+            Expanded(child: Text('Tracking live location via GPS/Network...')),
+          ],
+        ),
+        duration: Duration(seconds: 2),
+        backgroundColor: Color(0xFF0C241C),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+
+    final detected = await GpsLocationService.detectLocation();
+    if (!mounted) return;
+    setState(() => _isLocatingGps = false);
+
+    if (detected != null) {
+      appState.setGpsLocation(detected);
+      ScaffoldMessenger.of(this.context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: AppColors.brightGold, size: 18),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text('📍 Live Location: ${detected.name}\nSalah times calculated for your exact coordinates!'),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF133629),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(this.context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not detect GPS location. Please select your district from the list.'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   void _showLocationPicker(
@@ -97,6 +155,51 @@ class _SalahScheduleWidgetState extends State<SalahScheduleWidget> {
                     ),
                   ),
                   const SizedBox(height: 12),
+                  // Live GPS Quick Tile
+                  InkWell(
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _handleGpsTracking(context, appState);
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      margin: const EdgeInsets.only(bottom: 10),
+                      decoration: BoxDecoration(
+                        color: appState.isGpsActive ? AppColors.primaryGold.withOpacity(0.2) : const Color(0xFF061811),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: appState.isGpsActive ? AppColors.brightGold : AppColors.primaryGold.withOpacity(0.5),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.my_location_rounded, color: AppColors.brightGold, size: 18),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Use Live GPS / Current Location',
+                                  style: TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.bold),
+                                ),
+                                Text(
+                                  appState.gpsLocation != null
+                                      ? 'Active: ${appState.gpsLocation!.name}'
+                                      : 'Auto-detect exact coordinates & calculate Salah times',
+                                  style: const TextStyle(color: AppColors.lightGold, fontSize: 10.5),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.primaryGold, size: 12),
+                        ],
+                      ),
+                    ),
+                  ),
                   Expanded(
                     child: ListView.separated(
                       itemCount: filtered.length,
@@ -161,12 +264,22 @@ class _SalahScheduleWidgetState extends State<SalahScheduleWidget> {
     final appState = AppStateService();
     final locations = PrayerLocationsData.locations;
 
-    // Pick location (matching Ratnagiri if selected or default)
-    final currentLocation = locations.firstWhere(
-      (l) => l.id == appState.selectedLocationId,
-      orElse: () => locations.firstWhere((l) => l.id == 'in_mh_ratnagiri',
-          orElse: () => locations.first),
-    );
+    // Pick location (matching GPS, selected, Sindhudurg, Ratnagiri, or default)
+    PrayerLocation currentLocation;
+    if (appState.isGpsActive && appState.gpsLocation != null) {
+      currentLocation = appState.gpsLocation!;
+    } else {
+      currentLocation = locations.firstWhere(
+        (l) => l.id == appState.selectedLocationId,
+        orElse: () => locations.firstWhere(
+          (l) => l.id == 'in_mh_sindhudurg',
+          orElse: () => locations.firstWhere(
+            (l) => l.id == 'in_mh_ratnagiri',
+            orElse: () => locations.first,
+          ),
+        ),
+      );
+    }
 
     // Calculate prayer times
     final times = PrayerCalculatorService.calculate(
@@ -230,7 +343,9 @@ class _SalahScheduleWidgetState extends State<SalahScheduleWidget> {
     final cdHours = countdownDiff.inHours;
     final cdMins = countdownDiff.inMinutes % 60;
     final cdSecs = countdownDiff.inSeconds % 60;
-    final locationDisplayName = currentLocation.name.split(',')[0].trim();
+    final locationDisplayName = appState.isGpsActive
+        ? '${currentLocation.name.split(',')[0].trim()} (📍 GPS Live)'
+        : currentLocation.name.split(',')[0].trim();
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -414,27 +529,56 @@ class _SalahScheduleWidgetState extends State<SalahScheduleWidget> {
               // GPS Button
               Expanded(
                 child: GestureDetector(
-                  onTap: () {},
+                  onTap: _isLocatingGps ? null : () => _handleGpsTracking(context, appState),
                   child: Container(
                     height: 38,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF061811),
+                      color: appState.isGpsActive
+                          ? AppColors.primaryGold.withOpacity(0.2)
+                          : const Color(0xFF061811),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppColors.borderEmerald),
+                      border: Border.all(
+                        color: appState.isGpsActive ? AppColors.brightGold : AppColors.borderEmerald,
+                        width: appState.isGpsActive ? 1.5 : 1,
+                      ),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.gps_fixed_rounded, color: AppColors.primaryGold, size: 14),
-                        SizedBox(width: 6),
+                      children: [
+                        if (_isLocatingGps)
+                          const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.brightGold),
+                          )
+                        else
+                          Icon(
+                            Icons.gps_fixed_rounded,
+                            color: appState.isGpsActive ? AppColors.brightGold : AppColors.primaryGold,
+                            size: 14,
+                          ),
+                        const SizedBox(width: 6),
                         Text(
-                          'GPS',
+                          _isLocatingGps
+                              ? 'Locating...'
+                              : (appState.isGpsActive ? 'GPS ACTIVE' : 'GPS TRACK'),
                           style: TextStyle(
-                            color: Colors.white,
+                            color: appState.isGpsActive ? AppColors.brightGold : Colors.white,
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+                        if (appState.isGpsActive) ...[
+                          const SizedBox(width: 4),
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF10B981),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
