@@ -343,9 +343,7 @@ class _SalahScheduleWidgetState extends State<SalahScheduleWidget> {
     final cdHours = countdownDiff.inHours;
     final cdMins = countdownDiff.inMinutes % 60;
     final cdSecs = countdownDiff.inSeconds % 60;
-    final locationDisplayName = appState.isGpsActive
-        ? '${currentLocation.name.split(',')[0].trim()} (📍 GPS Live)'
-        : currentLocation.name.split(',')[0].trim();
+    final locationDisplayName = currentLocation.name;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -426,20 +424,41 @@ class _SalahScheduleWidgetState extends State<SalahScheduleWidget> {
               decoration: BoxDecoration(
                 color: const Color(0xFF061811),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.borderEmerald),
+                border: Border.all(
+                  color: appState.isGpsActive ? AppColors.brightGold : AppColors.borderEmerald,
+                ),
               ),
               child: Row(
                 children: [
                   const Text('📍', style: TextStyle(fontSize: 13)),
                   const SizedBox(width: 8),
-                  Text(
-                    locationDisplayName,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
+                  Expanded(
+                    child: Text(
+                      locationDisplayName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  if (appState.isGpsActive) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: const Color(0xFF10B981), width: 0.8),
+                      ),
+                      child: const Text(
+                        'GPS',
+                        style: TextStyle(color: Color(0xFF34D399), fontSize: 9, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -505,16 +524,20 @@ class _SalahScheduleWidgetState extends State<SalahScheduleWidget> {
                 border: Border.all(color: AppColors.borderEmerald),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    locationDisplayName,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
+                  Expanded(
+                    child: Text(
+                      locationDisplayName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  const SizedBox(width: 8),
                   const Icon(Icons.keyboard_arrow_down, color: AppColors.primaryGold, size: 18),
                 ],
               ),

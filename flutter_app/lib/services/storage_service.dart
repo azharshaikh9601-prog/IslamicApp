@@ -9,6 +9,7 @@ import '../models/playlist_model.dart';
 import '../models/course_model.dart';
 import '../models/user_model.dart';
 import '../models/prayer_location_model.dart';
+import '../models/payment_config_model.dart';
 import '../data/initial_data.dart';
 import 'api_service.dart';
 
@@ -17,6 +18,7 @@ class AppStateService extends ChangeNotifier {
   factory AppStateService() => _instance;
   AppStateService._internal() {
     _restoreUserSession();
+    _restoreDeletedCourses();
     loadFromBackend();
   }
 
@@ -42,6 +44,32 @@ class AppStateService extends ChangeNotifier {
 
   File _getSessionFile() {
     return File('user_session.json');
+  }
+
+  File _getDeletedCoursesFile() {
+    return File('deleted_courses.json');
+  }
+
+  final Set<String> _deletedCourseIds = {};
+
+  Future<void> _restoreDeletedCourses() async {
+    try {
+      final file = _getDeletedCoursesFile();
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        final List<dynamic> list = jsonDecode(content);
+        _deletedCourseIds.addAll(list.map((e) => e.toString()));
+        _courses.removeWhere((c) => _deletedCourseIds.contains(c.id));
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _saveDeletedCourses() async {
+    try {
+      final file = _getDeletedCoursesFile();
+      await file.writeAsString(jsonEncode(_deletedCourseIds.toList()));
+    } catch (_) {}
   }
 
   Future<void> _restoreUserSession() async {
@@ -92,6 +120,30 @@ class AppStateService extends ChangeNotifier {
     final res = await _api.login(
       emailOrUsername: emailOrUsername,
       password: password,
+    );
+    if (res['success'] == true && res['user'] != null) {
+      _currentUser = UserModel.fromJson(res['user']);
+      await _saveUserSession();
+      notifyListeners();
+    }
+    return res;
+  }
+
+  Future<Map<String, dynamic>> requestPasswordReset({
+    required String emailOrUsername,
+  }) async {
+    return await _api.requestPasswordReset(emailOrUsername: emailOrUsername);
+  }
+
+  Future<Map<String, dynamic>> resetPassword({
+    required String emailOrUsername,
+    required String resetCode,
+    required String newPassword,
+  }) async {
+    final res = await _api.resetPassword(
+      emailOrUsername: emailOrUsername,
+      resetCode: resetCode,
+      newPassword: newPassword,
     );
     if (res['success'] == true && res['user'] != null) {
       _currentUser = UserModel.fromJson(res['user']);
@@ -164,13 +216,56 @@ class AppStateService extends ChangeNotifier {
   }
 
   Future<bool> deleteCourse(String courseId) async {
+    _deletedCourseIds.add(courseId);
     _courses.removeWhere((c) => c.id == courseId);
+    await _saveDeletedCourses();
     notifyListeners();
     try {
       await _api.deleteCourse(courseId);
-      await refreshCourses();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[AppState] deleteCourse error: $e');
+    }
     return true;
+  }
+
+  Future<bool> updateCourseLessons(String courseId, List<CourseLesson> lessons) async {
+    final idx = _courses.indexWhere((c) => c.id == courseId);
+    if (idx >= 0) {
+      final old = _courses[idx];
+      _courses[idx] = CourseModel(
+        id: old.id,
+        title: old.title,
+        urduTitle: old.urduTitle,
+        category: old.category,
+        price: old.price,
+        originalPrice: old.originalPrice,
+        discountPercent: old.discountPercent,
+        duration: old.duration,
+        lessonsCount: lessons.length,
+        badge: old.badge,
+        instructor: old.instructor,
+        rating: old.rating,
+        studentsEnrolled: old.studentsEnrolled,
+        thumbnail: old.thumbnail,
+        description: old.description,
+        highlights: old.highlights,
+        lessons: lessons,
+      );
+      notifyListeners();
+      try {
+        await _api.updateCourse(
+          courseId: courseId,
+          title: old.title,
+          urduTitle: old.urduTitle,
+          description: old.description,
+          category: old.category,
+          price: old.price,
+          lessons: lessons,
+        );
+      } catch (_) {}
+      return true;
+    }
+    return false;
   }
 
   Future<bool> updateCourse({
@@ -265,13 +360,13 @@ class AppStateService extends ChangeNotifier {
 
   // Courses (Initialized with InitialData fallback)
   List<CourseModel> _courses = List.from(InitialData.courses);
-  List<CourseModel> get courses => _courses;
+  List<CourseModel> get courses => _courses.where((c) => !_deletedCourseIds.contains(c.id)).toList();
 
   Future<void> refreshCourses() async {
     try {
       final c = await _api.fetchCourses();
-      if (c != null && c.isNotEmpty) {
-        _courses = c;
+      if (c != null) {
+        _courses = c.where((course) => !_deletedCourseIds.contains(course.id)).toList();
         notifyListeners();
       }
     } catch (_) {}
@@ -315,6 +410,36 @@ class AppStateService extends ChangeNotifier {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Dynamic Payment Configuration (Zero Hardcoded Values)
+  // ---------------------------------------------------------------------------
+  PaymentConfigModel _paymentConfig = const PaymentConfigModel();
+  PaymentConfigModel get paymentConfig => _paymentConfig;
+
+  Future<void> refreshPaymentConfig() async {
+    try {
+      final cfg = await _api.fetchPaymentConfig();
+      _paymentConfig = cfg;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('[AppState] Error refreshing payment config: $e');
+    }
+  }
+
+  Future<bool> updatePaymentConfig(PaymentConfigModel config) async {
+    try {
+      final ok = await _api.updatePaymentConfig(config);
+      if (ok) {
+        _paymentConfig = config;
+        notifyListeners();
+        return true;
+      }
+    } catch (e) {
+      debugPrint('[AppState] Error updating payment config: $e');
+    }
+    return false;
+  }
+
   // Topic Navigation Filters
   String? _selectedTopicFilter;
   String? _selectedPlaylistId;
@@ -339,9 +464,18 @@ class AppStateService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Videos (Initialized with InitialData fallback)
+  // Videos (Initialized with InitialData fallback, strictly deduplicated by youtubeId)
   List<VideoModel> _videos = List.from(InitialData.videos);
-  List<VideoModel> get videos => _videos;
+  List<VideoModel> get videos {
+    final Map<String, VideoModel> unique = {};
+    for (final v in _videos) {
+      final yId = v.youtubeId.trim();
+      if (yId.isNotEmpty && !unique.containsKey(yId)) {
+        unique[yId] = v;
+      }
+    }
+    return unique.values.toList();
+  }
 
   Future<void> addVideo(VideoModel video) async {
     _videos.insert(0, video);
@@ -529,7 +663,7 @@ class AppStateService extends ChangeNotifier {
   }
 
   // Location & Fiqh
-  String _selectedLocationId = 'in_mh_ratnagiri';
+  String _selectedLocationId = 'in_mh_sindhudurg';
   int _asrFactor = 2; // 2 = Hanafi, 1 = Shafi'i
   PrayerLocation? _gpsLocation;
   bool _isGpsActive = false;
@@ -607,6 +741,7 @@ class AppStateService extends ChangeNotifier {
       }
 
       await loadAdminUsers();
+      await refreshPaymentConfig();
       await syncRealYouTubeFeed();
     } catch (_) {}
 

@@ -22,6 +22,7 @@ public class IslamicAppContext : DbContext
     public DbSet<UserInteractionStateEntity> UserStates { get; set; } = null!;
     public DbSet<MasalaInquiry> MasalaInquiries { get; set; } = null!;
     public DbSet<UserAccountEntity> Users { get; set; } = null!;
+    public DbSet<PaymentConfigItem> PaymentConfigs { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -215,6 +216,19 @@ public class IslamicAppContext : DbContext
                     v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
                     v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>())
                 .Metadata.SetValueComparer(stringListComparer);
+        });
+
+        // Payment Configurations (Configurable payment settings)
+        modelBuilder.Entity<PaymentConfigItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(50);
+            entity.Property(e => e.PayeeName).HasMaxLength(200);
+            entity.Property(e => e.UpiId).HasMaxLength(150);
+            entity.Property(e => e.QrImageUrl).HasMaxLength(500);
+            entity.Property(e => e.GatewayProvider).HasMaxLength(50);
+            entity.Property(e => e.GatewayKeyId).HasMaxLength(200);
+            entity.Property(e => e.Currency).HasMaxLength(10);
         });
     }
 }

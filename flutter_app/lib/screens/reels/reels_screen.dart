@@ -26,24 +26,6 @@ class _ReelsScreenState extends State<ReelsScreen> {
     );
   }
 
-  void _nextShort(int totalCount) {
-    if (_currentPageIndex < totalCount - 1) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
-
-  void _prevShort() {
-    if (_currentPageIndex > 0) {
-      _pageController.previousPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
-
   @override
   void dispose() {
     _pageController.dispose();
@@ -117,53 +99,6 @@ class _ReelsScreenState extends State<ReelsScreen> {
                     isActive: widget.isActive && (_currentPageIndex == index),
                   );
                 },
-              ),
-
-              // 2. Next / Prev Quick Floating Nav Buttons (Right edge center)
-              Positioned(
-                right: 12,
-                top: 0,
-                bottom: 0,
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (_currentPageIndex > 0)
-                        GestureDetector(
-                          onTap: _prevShort,
-                          child: Container(
-                            width: 38,
-                            height: 38,
-                            margin: const EdgeInsets.only(bottom: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.65),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                  color: AppColors.primaryGold.withOpacity(0.5)),
-                            ),
-                            child: const Icon(Icons.keyboard_arrow_up_rounded,
-                                color: Colors.white, size: 26),
-                          ),
-                        ),
-                      if (_currentPageIndex < reels.length - 1)
-                        GestureDetector(
-                          onTap: () => _nextShort(reels.length),
-                          child: Container(
-                            width: 38,
-                            height: 38,
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.65),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                  color: AppColors.primaryGold.withOpacity(0.5)),
-                            ),
-                            child: const Icon(Icons.keyboard_arrow_down_rounded,
-                                color: Colors.white, size: 26),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
               ),
             ],
           ),

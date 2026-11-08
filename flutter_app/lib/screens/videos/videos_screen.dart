@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
@@ -5,6 +6,7 @@ import '../../models/video_model.dart';
 import '../../models/playlist_model.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/video_player/in_app_player_modal.dart';
+import '../../widgets/video_selection_dialog.dart';
 
 class VideosScreen extends StatefulWidget {
   const VideosScreen({super.key});
@@ -62,9 +64,12 @@ class _VideosScreenState extends State<VideosScreen> {
             children: const [
               Icon(Icons.playlist_add, color: AppColors.primaryGold),
               SizedBox(width: 8),
-              Text(
-                'Admin: Create New Playlist',
-                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              Expanded(
+                child: Text(
+                  'Admin: Create New Playlist',
+                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -167,11 +172,12 @@ class _VideosScreenState extends State<VideosScreen> {
                       ),
                       ElevatedButton(
                         onPressed: () {
-                          _showVideoSelectionDialog(
+                          VideoSelectionDialog.show(
                             context,
-                            appState.videos,
-                            selectedVideos,
-                            (chosen) {
+                            appState: appState,
+                            initiallySelected: selectedVideos,
+                            title: 'Select Playlist Videos',
+                            onConfirmed: (chosen) {
                               setDialogState(() {
                                 selectedVideos = chosen;
                                 if (thumbCtrl.text.trim().isEmpty && chosen.isNotEmpty) {
@@ -248,171 +254,7 @@ class _VideosScreenState extends State<VideosScreen> {
     );
   }
 
-  // Interactive Video Picker for Playlists
-  void _showVideoSelectionDialog(
-    BuildContext context,
-    List<VideoModel> allVideos,
-    List<VideoModel> initiallySelected,
-    ValueChanged<List<VideoModel>> onConfirmed,
-  ) {
-    final selected = List<VideoModel>.from(initiallySelected);
-    String dialogSearchQuery = '';
 
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) {
-          final displayedVideos = dialogSearchQuery.trim().isEmpty
-              ? allVideos
-              : allVideos.where((v) {
-                  final q = dialogSearchQuery.toLowerCase();
-                  return v.title.toLowerCase().contains(q) ||
-                      v.category.toLowerCase().contains(q) ||
-                      v.description.toLowerCase().contains(q);
-                }).toList();
-
-          return AlertDialog(
-            backgroundColor: const Color(0xFF041E16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-              side: const BorderSide(color: AppColors.primaryGold, width: 1.5),
-            ),
-            title: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Select Uploaded Videos',
-                  style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryGold,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    '${selected.length} Selected',
-                    style: const TextStyle(color: Color(0xFF032B1F), fontSize: 11, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-            content: SizedBox(
-              width: 460,
-              height: 460,
-              child: Column(
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceEmerald,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.borderEmerald),
-                    ),
-                    child: TextField(
-                      style: const TextStyle(color: Colors.white, fontSize: 12.5),
-                      onChanged: (val) {
-                        setDialogState(() {
-                          dialogSearchQuery = val;
-                        });
-                      },
-                      decoration: InputDecoration(
-                        hintText: 'Search video by title or category...',
-                        hintStyle: const TextStyle(color: Colors.white38, fontSize: 11.5),
-                        prefixIcon: const Icon(Icons.search, color: AppColors.primaryGold, size: 18),
-                        suffixIcon: dialogSearchQuery.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.close, color: Colors.white54, size: 16),
-                                onPressed: () {
-                                  setDialogState(() {
-                                    dialogSearchQuery = '';
-                                  });
-                                },
-                              )
-                            : null,
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 9),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: displayedVideos.isEmpty
-                        ? const Center(
-                            child: Text('No videos match your search.', style: TextStyle(color: Colors.white70)),
-                          )
-                        : ListView.separated(
-                            itemCount: displayedVideos.length,
-                            separatorBuilder: (_, __) => const Divider(color: AppColors.borderEmerald, height: 1),
-                            itemBuilder: (ctx, idx) {
-                              final v = displayedVideos[idx];
-                              final isChecked = selected.any((s) => s.id == v.id);
-
-                              return CheckboxListTile(
-                                activeColor: AppColors.primaryGold,
-                                checkColor: AppColors.darkEmerald,
-                                tileColor: isChecked ? AppColors.surfaceEmerald.withOpacity(0.3) : null,
-                                dense: true,
-                                value: isChecked,
-                                onChanged: (val) {
-                                  setDialogState(() {
-                                    if (val == true) {
-                                      selected.add(v);
-                                    } else {
-                                      selected.removeWhere((s) => s.id == v.id);
-                                    }
-                                  });
-                                },
-                                secondary: ClipRRect(
-                                  borderRadius: BorderRadius.circular(6),
-                                  child: SizedBox(
-                                    width: 50,
-                                    height: 35,
-                                    child: Image.network(
-                                      v.thumbnailUrl,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => Container(color: Colors.white12),
-                                    ),
-                                  ),
-                                ),
-                                title: Text(
-                                  v.title,
-                                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                subtitle: Text(
-                                  '${v.duration} • ${v.category}',
-                                  style: const TextStyle(color: AppColors.darkTextMuted, fontSize: 10),
-                                ),
-                              );
-                            },
-                          ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  onConfirmed(selected);
-                  Navigator.pop(ctx);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryGold,
-                  foregroundColor: AppColors.darkEmerald,
-                ),
-                child: Text('Done (${selected.length} Videos)', style: const TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
 
   // Edit Playlist Dialog: add/remove videos and modify details
   void _showEditPlaylistDialog(BuildContext context, PlaylistModel playlist, AppStateService appState) {
@@ -433,14 +275,15 @@ class _VideosScreenState extends State<VideosScreen> {
               side: const BorderSide(color: AppColors.primaryGold, width: 1.5),
             ),
             title: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: const [
-                    Icon(Icons.edit_note, color: AppColors.primaryGold),
-                    SizedBox(width: 8),
-                    Text('Edit Playlist', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                  ],
+                const Icon(Icons.edit_note, color: AppColors.primaryGold),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Edit Playlist',
+                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete_forever, color: Colors.redAccent, size: 20),
@@ -482,19 +325,24 @@ class _VideosScreenState extends State<VideosScreen> {
                     ),
                     const SizedBox(height: 14),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Videos in Playlist (${currentVideos.length}):',
-                          style: const TextStyle(color: AppColors.lightGold, fontSize: 12.5, fontWeight: FontWeight.bold),
+                        Expanded(
+                          child: Text(
+                            'Videos in Playlist (${currentVideos.length}):',
+                            style: const TextStyle(color: AppColors.lightGold, fontSize: 12.5, fontWeight: FontWeight.bold),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         OutlinedButton.icon(
                           onPressed: () {
-                            _showVideoSelectionDialog(
+                            VideoSelectionDialog.show(
                               context,
-                              appState.videos,
-                              currentVideos,
-                              (selected) {
+                              appState: appState,
+                              initiallySelected: currentVideos,
+                              title: 'Edit Playlist Videos',
+                              onConfirmed: (selected) {
                                 setDialogState(() {
                                   currentVideos = selected;
                                 });
@@ -616,26 +464,37 @@ class _VideosScreenState extends State<VideosScreen> {
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: AppColors.darkEmerald,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: const BorderSide(color: AppColors.primaryGold, width: 1.5),
-          ),
-          title: Row(
-            children: const [
-              Icon(Icons.video_call, color: AppColors.primaryGold),
-              SizedBox(width: 8),
-              Text(
-                'Admin: Upload Video Lesson',
-                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
+        builder: (ctx, setDialogState) {
+          final dialogWidth = math.min(460.0, MediaQuery.of(ctx).size.width * 0.92);
+
+          return AlertDialog(
+            insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            backgroundColor: AppColors.darkEmerald,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: const BorderSide(color: AppColors.primaryGold, width: 1.5),
+            ),
+            titlePadding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            title: Row(
+              children: const [
+                Icon(Icons.video_call, color: AppColors.primaryGold, size: 20),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Admin: Upload Video Lesson',
+                    style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: math.min(dialogWidth, MediaQuery.of(ctx).size.width - 48),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                 TextField(
                   controller: titleCtrl,
                   style: const TextStyle(color: Colors.white, fontSize: 13),
@@ -696,7 +555,8 @@ class _VideosScreenState extends State<VideosScreen> {
               ],
             ),
           ),
-          actions: [
+        ),
+        actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
               child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
@@ -741,10 +601,11 @@ class _VideosScreenState extends State<VideosScreen> {
               child: const Text('Upload Video', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
-        ),
-      ),
-    );
-  }
+        );
+      },
+    ),
+  );
+}
 
   @override
   void dispose() {

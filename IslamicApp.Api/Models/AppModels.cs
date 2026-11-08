@@ -205,6 +205,26 @@ public class AuthResponse
     public UserDto? User { get; set; }
 }
 
+public class ForgotPasswordRequest
+{
+    public string EmailOrUsername { get; set; } = string.Empty;
+}
+
+public class ForgotPasswordResponse
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public string? Email { get; set; }
+    public string? ResetCode { get; set; }
+}
+
+public class ResetPasswordRequest
+{
+    public string EmailOrUsername { get; set; } = string.Empty;
+    public string ResetCode { get; set; } = string.Empty;
+    public string NewPassword { get; set; } = string.Empty;
+}
+
 public class UpdateCoursePriceRequest
 {
     public int Price { get; set; }
@@ -221,6 +241,7 @@ public class UpdateCourseRequest
     public int? Price { get; set; }
     public int? OriginalPrice { get; set; }
     public int? DiscountPercent { get; set; }
+    public List<CourseLessonItem>? Lessons { get; set; }
 }
 
 public class EnrollCourseRequest
@@ -228,6 +249,31 @@ public class EnrollCourseRequest
     public string UserId { get; set; } = string.Empty;
     public string CourseId { get; set; } = string.Empty;
 }
+
+public class PaymentConfigItem
+{
+    public string Id { get; set; } = "default_payment";
+    public string PayeeName { get; set; } = "MOHAMMED HASNAIN";
+    public string UpiId { get; set; } = "9373756095@ybl";
+    public string QrImageUrl { get; set; } = "assets/images/phonepe-qr.jpg";
+    public string GatewayProvider { get; set; } = "UPI_DIRECT";
+    public string GatewayKeyId { get; set; } = string.Empty;
+    public string Currency { get; set; } = "INR";
+    public bool IsActive { get; set; } = true;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
+
+public class UpdatePaymentConfigRequest
+{
+    public string? PayeeName { get; set; }
+    public string? UpiId { get; set; }
+    public string? QrImageUrl { get; set; }
+    public string? GatewayProvider { get; set; }
+    public string? GatewayKeyId { get; set; }
+    public string? Currency { get; set; }
+    public bool? IsActive { get; set; }
+}
+
 
 
 

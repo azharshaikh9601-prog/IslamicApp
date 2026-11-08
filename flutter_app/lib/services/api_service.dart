@@ -9,6 +9,7 @@ import '../models/quote_model.dart';
 import '../models/dhikr_model.dart';
 import '../models/prayer_location_model.dart';
 import '../models/user_model.dart';
+import '../models/payment_config_model.dart';
 
 class ApiService {
   // Local development backend URL
@@ -26,6 +27,13 @@ class ApiService {
     const customUrl = String.fromEnvironment('API_BASE_URL');
     if (customUrl.isNotEmpty) {
       return customUrl;
+    }
+
+    if (kIsWeb) {
+      final origin = Uri.base.origin;
+      if (origin.isNotEmpty && !origin.startsWith('file:')) {
+        return '$origin/api';
+      }
     }
 
     if (kReleaseMode) {
@@ -515,18 +523,30 @@ class ApiService {
     required String description,
     required String category,
     required int price,
+    List<CourseLesson>? lessons,
   }) async {
     try {
+      final Map<String, dynamic> body = {
+        'title': title,
+        'urduTitle': urduTitle,
+        'description': description,
+        'category': category,
+        'price': price,
+      };
+      if (lessons != null) {
+        body['lessons'] = lessons.map((l) => {
+          'id': l.id,
+          'title': l.title,
+          'duration': l.duration,
+          'youtubeId': l.youtubeId,
+          'isFreePreview': l.isFreePreview,
+          'summary': l.summary,
+        }).toList();
+      }
       final res = await http.put(
         Uri.parse('$baseUrl/courses/$courseId'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'title': title,
-          'urduTitle': urduTitle,
-          'description': description,
-          'category': category,
-          'price': price,
-        }),
+        body: jsonEncode(body),
       ).timeout(const Duration(seconds: 4));
       return res.statusCode == 200;
     } catch (_) {
@@ -549,6 +569,33 @@ class ApiService {
       }
     } catch (_) {}
     return null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Dynamic Payment Configuration API
+  // ---------------------------------------------------------------------------
+  Future<PaymentConfigModel> fetchPaymentConfig() async {
+    try {
+      final res = await http.get(Uri.parse('$baseUrl/payment/config')).timeout(const Duration(seconds: 4));
+      if (res.statusCode == 200) {
+        final json = jsonDecode(utf8.decode(res.bodyBytes));
+        return PaymentConfigModel.fromJson(json);
+      }
+    } catch (_) {}
+    return const PaymentConfigModel();
+  }
+
+  Future<bool> updatePaymentConfig(PaymentConfigModel config) async {
+    try {
+      final res = await http.put(
+        Uri.parse('$baseUrl/payment/config'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(config.toJson()),
+      ).timeout(const Duration(seconds: 4));
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -589,6 +636,46 @@ class ApiService {
           'password': password,
         }),
       ).timeout(const Duration(seconds: 5));
+      final data = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+      return data;
+    } catch (e) {
+      return {'success': false, 'message': 'Network error. Please ensure backend is running.'};
+    }
+  }
+
+  Future<Map<String, dynamic>> requestPasswordReset({
+    required String emailOrUsername,
+  }) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/auth/forgot-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'emailOrUsername': emailOrUsername,
+        }),
+      ).timeout(const Duration(seconds: 6));
+      final data = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+      return data;
+    } catch (e) {
+      return {'success': false, 'message': 'Network error. Please ensure backend is running.'};
+    }
+  }
+
+  Future<Map<String, dynamic>> resetPassword({
+    required String emailOrUsername,
+    required String resetCode,
+    required String newPassword,
+  }) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/auth/reset-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'emailOrUsername': emailOrUsername,
+          'resetCode': resetCode,
+          'newPassword': newPassword,
+        }),
+      ).timeout(const Duration(seconds: 6));
       final data = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
       return data;
     } catch (e) {

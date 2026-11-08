@@ -12,6 +12,7 @@ import 'tools/tools_screen.dart';
 import 'tools/ask_masala_screen.dart';
 import 'profile/scholar_profile_screen.dart';
 import 'dashboard/dashboard_screen.dart';
+import '../widgets/video_player/shorts_player_stub.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -22,6 +23,13 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-warm WebView2 for instant Shorts playback
+    ShortsWebviewPool.instance.prewarm();
+  }
 
   void _onTabSelected(int index) {
     setState(() => _currentIndex = index);

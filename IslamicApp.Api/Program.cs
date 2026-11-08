@@ -29,7 +29,34 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 app.UseCors();
-app.UseStaticFiles();
+
+// Serve Islamic App web platform on port 5000 (accessible on localhost & mobile Wi-Fi IP)
+// Prioritize compiled Flutter Web App if present so mobile gets the exact real app!
+var flutterWebPath = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "..", "flutter_app", "build", "web"));
+var fallbackWebPath = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, ".."));
+
+var activeWebPath = Directory.Exists(flutterWebPath) && File.Exists(Path.Combine(flutterWebPath, "index.html"))
+    ? flutterWebPath
+    : fallbackWebPath;
+
+if (File.Exists(Path.Combine(activeWebPath, "index.html")))
+{
+    var webFileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(activeWebPath);
+    app.UseDefaultFiles(new DefaultFilesOptions
+    {
+        FileProvider = webFileProvider,
+        RequestPath = ""
+    });
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = webFileProvider,
+        RequestPath = ""
+    });
+}
+else
+{
+    app.UseStaticFiles();
+}
 
 // Run SQL Server database schema initialization & migration on startup
 using (var scope = app.Services.CreateScope())
@@ -211,6 +238,10 @@ app.MapGet("/api/player", (HttpContext httpContext, string? v, bool? isShort) =>
   <meta charset=""utf-8"">
   <meta name=""viewport"" content=""width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"">
   <meta name=""referrer"" content=""unsafe-url"">
+  <link rel=""preconnect"" href=""https://www.youtube-nocookie.com"">
+  <link rel=""preconnect"" href=""https://i.ytimg.com"">
+  <link rel=""preconnect"" href=""https://googleads.g.doubleclick.net"">
+  <link rel=""dns-prefetch"" href=""https://www.youtube-nocookie.com"">
   <style>
     * {{ margin: 0; padding: 0; box-sizing: border-box; }}
     html, body {{
@@ -231,11 +262,31 @@ app.MapGet("/api/player", (HttpContext httpContext, string? v, bool? isShort) =>
 </head>
 <body>
   <iframe
-    src=""https://www.youtube-nocookie.com/embed/{videoId}?autoplay=1&rel=0&playsinline=1&modestbranding=1{loopParam}""
+    id=""ytplayer""
+    src=""https://www.youtube-nocookie.com/embed/{videoId}?autoplay=1&mute=0&rel=0&playsinline=1&modestbranding=1&enablejsapi=1{loopParam}""
+    loading=""eager""
     referrerpolicy=""unsafe-url""
     allow=""accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share""
     allowfullscreen>
   </iframe>
+  <script>
+    (function() {{
+      var ifr = document.getElementById('ytplayer');
+      function sendPlay() {{
+        try {{
+          if (ifr && ifr.contentWindow) {{
+            ifr.contentWindow.postMessage('{{""event"":""command"",""func"":""playVideo"",""args"":""""}}', '*');
+          }}
+        }} catch (_) {{}}
+      }}
+      ifr.addEventListener('load', function() {{
+        sendPlay();
+        setTimeout(sendPlay, 150);
+        setTimeout(sendPlay, 400);
+      }});
+      setTimeout(sendPlay, 300);
+    }})();
+  </script>
 </body>
 </html>";
     return Results.Content(html, "text/html");
@@ -393,6 +444,21 @@ app.MapPost("/api/courses/{id}/enroll", async (SqlDatabaseService db, string id,
 });
 
 // ---------------------------------------------------------------------------
+// Dynamic Payment Configuration API (Configurable Payee, UPI ID, QR, and Gateway)
+// ---------------------------------------------------------------------------
+app.MapGet("/api/payment/config", async (SqlDatabaseService db) =>
+{
+    var cfg = await db.GetPaymentConfigAsync();
+    return Results.Ok(cfg);
+});
+
+app.MapPut("/api/payment/config", async (SqlDatabaseService db, UpdatePaymentConfigRequest req) =>
+{
+    var updated = await db.UpdatePaymentConfigAsync(req);
+    return Results.Ok(updated);
+});
+
+// ---------------------------------------------------------------------------
 // Authentication & User Accounts API
 // ---------------------------------------------------------------------------
 app.MapPost("/api/auth/register", async (SqlDatabaseService db, RegisterRequest req) =>
@@ -404,6 +470,18 @@ app.MapPost("/api/auth/register", async (SqlDatabaseService db, RegisterRequest 
 app.MapPost("/api/auth/login", async (SqlDatabaseService db, LoginRequest req) =>
 {
     var res = await db.LoginUserAsync(req);
+    return res.Success ? Results.Ok(res) : Results.BadRequest(res);
+});
+
+app.MapPost("/api/auth/forgot-password", async (SqlDatabaseService db, ForgotPasswordRequest req) =>
+{
+    var res = await db.RequestPasswordResetAsync(req);
+    return res.Success ? Results.Ok(res) : Results.BadRequest(res);
+});
+
+app.MapPost("/api/auth/reset-password", async (SqlDatabaseService db, ResetPasswordRequest req) =>
+{
+    var res = await db.ResetPasswordAsync(req);
     return res.Success ? Results.Ok(res) : Results.BadRequest(res);
 });
 

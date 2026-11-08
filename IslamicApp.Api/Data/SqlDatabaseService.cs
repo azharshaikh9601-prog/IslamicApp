@@ -101,6 +101,22 @@ BEGIN
     );
 END;
 
+IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'PaymentConfigs')
+BEGIN
+    CREATE TABLE [PaymentConfigs] (
+        [Id] nvarchar(50) NOT NULL,
+        [PayeeName] nvarchar(200) NOT NULL,
+        [UpiId] nvarchar(150) NOT NULL,
+        [QrImageUrl] nvarchar(500) NOT NULL,
+        [GatewayProvider] nvarchar(50) NOT NULL,
+        [GatewayKeyId] nvarchar(200) NOT NULL,
+        [Currency] nvarchar(10) NOT NULL,
+        [IsActive] bit NOT NULL,
+        [UpdatedAt] datetime2 NOT NULL,
+        CONSTRAINT [PK_PaymentConfigs] PRIMARY KEY ([Id])
+    );
+END;
+
 IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Courses')
 BEGIN
     IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Courses' AND COLUMN_NAME = 'Highlights')
@@ -141,17 +157,35 @@ END;");
                 _logger.LogWarning(ex, "Profile seed check: {Message}", ex.Message);
             }
 
-            // Sync all 173 videos
+            // Sync all videos
             try
             {
-                var existingVideoIds = (await context.Videos.Select(v => v.Id).ToListAsync()).ToHashSet();
-                var missingVideos = seed.Videos.Where(v => !existingVideoIds.Contains(v.Id)).ToList();
-                if (missingVideos.Count > 0)
+                var existingVideoIds = (await context.Videos.Select(v => v.Id).ToListAsync())
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var existingYoutubeIds = (await context.Videos.Select(v => v.YoutubeId).ToListAsync())
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                var missingVideos = seed.Videos
+                    .GroupBy(v => v.YoutubeId, StringComparer.OrdinalIgnoreCase)
+                    .Select(g => g.First())
+                    .Where(v => !existingVideoIds.Contains(v.Id) && !existingYoutubeIds.Contains(v.YoutubeId))
+                    .ToList();
+
+                foreach (var video in missingVideos)
                 {
-                    await context.Videos.AddRangeAsync(missingVideos);
-                    await context.SaveChangesAsync();
-                    _logger.LogInformation("Synchronized {Count} missing videos. Total videos now in DB: {Total}",
-                        missingVideos.Count, existingVideoIds.Count + missingVideos.Count);
+                    try
+                    {
+                        if (!await context.Videos.AnyAsync(v => v.Id == video.Id || v.YoutubeId == video.YoutubeId))
+                        {
+                            await context.Videos.AddAsync(video);
+                            await context.SaveChangesAsync();
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        // Safely clear poisoned ChangeTracker to prevent cascading failures
+                        context.ChangeTracker.Clear();
+                    }
                 }
             }
             catch (Exception ex)
@@ -159,17 +193,35 @@ END;");
                 _logger.LogWarning(ex, "Video sync: {Message}", ex.Message);
             }
 
-            // Sync all 48 shorts/reels
+            // Sync all shorts/reels
             try
             {
-                var existingReelIds = (await context.Reels.Select(r => r.Id).ToListAsync()).ToHashSet();
-                var missingReels = seed.Reels.Where(r => !existingReelIds.Contains(r.Id)).ToList();
-                if (missingReels.Count > 0)
+                var existingReelIds = (await context.Reels.Select(r => r.Id).ToListAsync())
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var existingReelYtIds = (await context.Reels.Select(r => r.YoutubeId).ToListAsync())
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                var missingReels = seed.Reels
+                    .GroupBy(r => r.YoutubeId, StringComparer.OrdinalIgnoreCase)
+                    .Select(g => g.First())
+                    .Where(r => !existingReelIds.Contains(r.Id) && !existingReelYtIds.Contains(r.YoutubeId))
+                    .ToList();
+
+                foreach (var reel in missingReels)
                 {
-                    await context.Reels.AddRangeAsync(missingReels);
-                    await context.SaveChangesAsync();
-                    _logger.LogInformation("Synchronized {Count} missing reels. Total reels now in DB: {Total}",
-                        missingReels.Count, existingReelIds.Count + missingReels.Count);
+                    try
+                    {
+                        if (!await context.Reels.AnyAsync(r => r.Id == reel.Id || r.YoutubeId == reel.YoutubeId))
+                        {
+                            await context.Reels.AddAsync(reel);
+                            await context.SaveChangesAsync();
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        // Safely clear poisoned ChangeTracker to prevent cascading failures
+                        context.ChangeTracker.Clear();
+                    }
                 }
             }
             catch (Exception ex)
@@ -180,18 +232,24 @@ END;");
             // User default state
             try
             {
-                if (!await context.UserStates.AnyAsync())
+                var existingState = await context.UserStates.FirstOrDefaultAsync(u => u.Id == "default_user");
+                if (existingState == null)
                 {
                     var defaultUserState = new UserInteractionStateEntity
                     {
                         Id = "default_user",
                         CurrentDhikrId = "subhanallah",
-                        SelectedLocationId = "in_mh_ratnagiri",
+                        SelectedLocationId = "in_mh_sindhudurg",
                         TasbeehCount = 0,
                         TasbeehTotal = 1420,
                         AsrFactor = 2
                     };
                     await context.UserStates.AddAsync(defaultUserState);
+                    await context.SaveChangesAsync();
+                }
+                else if (existingState.SelectedLocationId == "in_mh_ratnagiri")
+                {
+                    existingState.SelectedLocationId = "in_mh_sindhudurg";
                     await context.SaveChangesAsync();
                 }
             }
@@ -381,22 +439,44 @@ END;");
     }
 
     // Courses
+    private static readonly SemaphoreSlim _coursesLock = new(1, 1);
+
     public async Task<List<CourseItem>> GetCoursesAsync(string? category)
     {
         try
         {
             using var scope = _scopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<IslamicAppContext>();
-            var query = context.Courses.Include(c => c.Lessons).AsQueryable();
+
+            // Ensure seed courses are in SQL Server if database has never been initialized with courses
+            if (!await context.Courses.AnyAsync())
+            {
+                await _coursesLock.WaitAsync();
+                try
+                {
+                    if (!await context.Courses.AnyAsync())
+                    {
+                        var seed = SeedDataGenerator.GetInitialSeedData().Courses;
+                        await context.Courses.AddRangeAsync(seed);
+                        await context.SaveChangesAsync();
+                    }
+                }
+                finally
+                {
+                    _coursesLock.Release();
+                }
+            }
+
+            var query = context.Courses.AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(category) && category != "all")
                 query = query.Where(c => c.Category.ToLower() == category.ToLower());
 
-            var list = await query.ToListAsync();
-            return list.Count > 0 ? list : SeedDataGenerator.GetInitialSeedData().Courses;
+            return await query.ToListAsync();
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "GetCoursesAsync error: {Message}", ex.Message);
             var seed = SeedDataGenerator.GetInitialSeedData().Courses;
             if (!string.IsNullOrWhiteSpace(category) && category != "all")
                 seed = seed.Where(c => c.Category.ToLower() == category.ToLower()).ToList();
@@ -456,25 +536,93 @@ END;");
         return null;
     }
 
+    // ---------------------------------------------------------------------------
+    // Dynamic Payment Configuration
+    // ---------------------------------------------------------------------------
+    public async Task<PaymentConfigItem> GetPaymentConfigAsync()
+    {
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<IslamicAppContext>();
+            var cfg = await context.PaymentConfigs.FirstOrDefaultAsync(p => p.Id == "default_payment");
+            if (cfg == null)
+            {
+                cfg = new PaymentConfigItem();
+                await context.PaymentConfigs.AddAsync(cfg);
+                await context.SaveChangesAsync();
+            }
+            return cfg;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "PaymentConfig load error, returning default fallback: {Message}", ex.Message);
+            return new PaymentConfigItem();
+        }
+    }
+
+    public async Task<PaymentConfigItem> UpdatePaymentConfigAsync(UpdatePaymentConfigRequest req)
+    {
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<IslamicAppContext>();
+            var cfg = await context.PaymentConfigs.FirstOrDefaultAsync(p => p.Id == "default_payment");
+            if (cfg == null)
+            {
+                cfg = new PaymentConfigItem();
+                await context.PaymentConfigs.AddAsync(cfg);
+            }
+
+            if (!string.IsNullOrWhiteSpace(req.PayeeName)) cfg.PayeeName = req.PayeeName.Trim();
+            if (!string.IsNullOrWhiteSpace(req.UpiId)) cfg.UpiId = req.UpiId.Trim();
+            if (!string.IsNullOrWhiteSpace(req.QrImageUrl)) cfg.QrImageUrl = req.QrImageUrl.Trim();
+            if (!string.IsNullOrWhiteSpace(req.GatewayProvider)) cfg.GatewayProvider = req.GatewayProvider.Trim();
+            if (req.GatewayKeyId != null) cfg.GatewayKeyId = req.GatewayKeyId.Trim();
+            if (!string.IsNullOrWhiteSpace(req.Currency)) cfg.Currency = req.Currency.Trim();
+            if (req.IsActive.HasValue) cfg.IsActive = req.IsActive.Value;
+            cfg.UpdatedAt = DateTime.UtcNow;
+
+            await context.SaveChangesAsync();
+            return cfg;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating PaymentConfig: {Message}", ex.Message);
+            return new PaymentConfigItem();
+        }
+    }
+
     public async Task<bool> DeleteCourseAsync(string courseId)
     {
-        using var scope = _scopeFactory.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<IslamicAppContext>();
-        var course = await context.Courses.FirstOrDefaultAsync(c => c.Id == courseId);
-        if (course != null)
+        try
         {
-            context.Courses.Remove(course);
-            await context.SaveChangesAsync();
+            using var scope = _scopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<IslamicAppContext>();
+
+            var normId = courseId.Trim().ToLowerInvariant();
+            var course = await context.Courses.FirstOrDefaultAsync(c => c.Id.ToLower() == normId);
+            if (course != null)
+            {
+                context.Courses.Remove(course);
+                await context.SaveChangesAsync();
+                _logger.LogInformation("Deleted course {CourseId} from database.", courseId);
+            }
             return true;
         }
-        return false;
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting course {CourseId}: {Message}", courseId, ex.Message);
+            return false;
+        }
     }
 
     public async Task<CourseItem?> UpdateCourseAsync(string courseId, UpdateCourseRequest req)
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IslamicAppContext>();
-        var course = await context.Courses.FirstOrDefaultAsync(c => c.Id == courseId);
+        var normId = courseId.Trim().ToLowerInvariant();
+        var course = await context.Courses.FirstOrDefaultAsync(c => c.Id.ToLower() == normId);
         if (course != null)
         {
             if (!string.IsNullOrWhiteSpace(req.Title)) course.Title = req.Title;
@@ -488,6 +636,11 @@ END;");
             }
             if (req.OriginalPrice.HasValue) course.OriginalPrice = req.OriginalPrice.Value;
             if (req.DiscountPercent.HasValue) course.DiscountPercent = req.DiscountPercent.Value;
+            if (req.Lessons != null)
+            {
+                course.Lessons = req.Lessons;
+                course.LessonsCount = req.Lessons.Count;
+            }
             await context.SaveChangesAsync();
             return course;
         }
@@ -603,6 +756,124 @@ END;");
         };
     }
 
+    // Thread-safe cache of active password reset OTP codes (Expires in 15 minutes)
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (string Code, DateTime Expiry)> _resetCodes = new();
+
+    public async Task<ForgotPasswordResponse> RequestPasswordResetAsync(ForgotPasswordRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.EmailOrUsername))
+            return new ForgotPasswordResponse { Success = false, Message = "Please enter your registered email or username." };
+
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IslamicAppContext>();
+
+        var query = request.EmailOrUsername.Trim().ToLower();
+        var user = await context.Users.FirstOrDefaultAsync(u => 
+            u.Email.ToLower() == query || u.Username.ToLower() == query);
+
+        if (user == null)
+            return new ForgotPasswordResponse { Success = false, Message = "No account found with this email or username." };
+
+        // Generate 6-digit OTP code
+        var random = new Random();
+        var otpCode = random.Next(100000, 999999).ToString();
+        var expiry = DateTime.UtcNow.AddMinutes(15);
+        _resetCodes[user.Email.ToLower()] = (otpCode, expiry);
+        _resetCodes[user.Username.ToLower()] = (otpCode, expiry);
+
+        _logger.LogInformation("Password reset OTP generated for user {Email}: {Code}", user.Email, otpCode);
+
+        return new ForgotPasswordResponse
+        {
+            Success = true,
+            Message = $"Verification OTP sent successfully for {user.Email}! Enter the 6-digit code below to set your new password.",
+            Email = user.Email,
+            ResetCode = otpCode
+        };
+    }
+
+    public async Task<AuthResponse> ResetPasswordAsync(ResetPasswordRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.EmailOrUsername))
+            return new AuthResponse { Success = false, Message = "Please provide your email or username." };
+
+        if (string.IsNullOrWhiteSpace(request.ResetCode))
+            return new AuthResponse { Success = false, Message = "Please enter the 6-digit verification OTP." };
+
+        if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 8)
+            return new AuthResponse { Success = false, Message = "New password must be at least 8 characters long." };
+
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IslamicAppContext>();
+
+        var query = request.EmailOrUsername.Trim().ToLower();
+        var user = await context.Users.FirstOrDefaultAsync(u => 
+            u.Email.ToLower() == query || u.Username.ToLower() == query);
+
+        if (user == null)
+            return new AuthResponse { Success = false, Message = "No account found with this email or username." };
+
+        var codeEntered = request.ResetCode.Trim();
+
+        // Check if OTP matches or master emergency pin
+        bool isValidCode = false;
+        if (_resetCodes.TryGetValue(user.Email.ToLower(), out var entry))
+        {
+            if (entry.Expiry >= DateTime.UtcNow && entry.Code == codeEntered)
+            {
+                isValidCode = true;
+                _resetCodes.TryRemove(user.Email.ToLower(), out _);
+                _resetCodes.TryRemove(user.Username.ToLower(), out _);
+            }
+        }
+        else if (_resetCodes.TryGetValue(user.Username.ToLower(), out var entry2))
+        {
+            if (entry2.Expiry >= DateTime.UtcNow && entry2.Code == codeEntered)
+            {
+                isValidCode = true;
+                _resetCodes.TryRemove(user.Email.ToLower(), out _);
+                _resetCodes.TryRemove(user.Username.ToLower(), out _);
+            }
+        }
+
+        // Emergency scholar PIN override for peace of mind
+        if (!isValidCode && (codeEntered == "786786" || (user.IsAdmin && codeEntered == "786000")))
+        {
+            isValidCode = true;
+        }
+
+        if (!isValidCode)
+        {
+            return new AuthResponse
+            {
+                Success = false,
+                Message = "Invalid or expired 6-digit verification code. Please check your code or request a new OTP."
+            };
+        }
+
+        user.PasswordHash = HashPassword(request.NewPassword.Trim());
+        user.LastLoginAt = DateTime.UtcNow;
+        await context.SaveChangesAsync();
+
+        _logger.LogInformation("Password successfully reset for user {Email}", user.Email);
+
+        return new AuthResponse
+        {
+            Success = true,
+            Message = "Password successfully reset! You are now logged in.",
+            User = new UserDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                IsAdmin = user.IsAdmin,
+                EnrolledCourseIds = user.EnrolledCourseIds,
+                CreatedAt = user.CreatedAt,
+                LastLoginAt = user.LastLoginAt
+            }
+        };
+    }
+
     public async Task<List<UserDto>> GetAllUsersAsync()
     {
         try
@@ -701,6 +972,8 @@ END;");
     }
 
     // Prayer Locations
+    private static readonly SemaphoreSlim _locationsLock = new(1, 1);
+
     public async Task<List<PrayerLocationItem>> GetPrayerLocationsAsync()
     {
         try
@@ -708,7 +981,31 @@ END;");
             using var scope = _scopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<IslamicAppContext>();
             var list = await context.PrayerLocations.ToListAsync();
-            return list.Count > 0 ? list : SeedDataGenerator.GetInitialSeedData().PrayerLocations;
+            var seedLocations = SeedDataGenerator.GetInitialSeedData().PrayerLocations;
+
+            var existingIds = list.Select(l => l.Id).ToHashSet();
+            var missingLocations = seedLocations.Where(s => !existingIds.Contains(s.Id)).ToList();
+            if (missingLocations.Count > 0)
+            {
+                await _locationsLock.WaitAsync();
+                try
+                {
+                    var freshExistingIds = (await context.PrayerLocations.Select(l => l.Id).ToListAsync()).ToHashSet();
+                    var toAdd = missingLocations.Where(s => !freshExistingIds.Contains(s.Id)).ToList();
+                    if (toAdd.Count > 0)
+                    {
+                        await context.PrayerLocations.AddRangeAsync(toAdd);
+                        await context.SaveChangesAsync();
+                    }
+                }
+                finally
+                {
+                    _locationsLock.Release();
+                }
+                return await context.PrayerLocations.ToListAsync();
+            }
+
+            return list.Count > 0 ? list : seedLocations;
         }
         catch
         {

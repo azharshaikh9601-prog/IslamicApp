@@ -4,6 +4,67 @@ import 'package:webview_windows/webview_windows.dart';
 import '../../core/theme/app_colors.dart';
 import '../../services/api_service.dart';
 
+/// Singleton manager for WebView2 instance to achieve instant Shorts playback.
+/// Eliminates the 2-4 second process startup latency by keeping Chromium pre-warmed.
+class ShortsWebviewPool {
+  static final ShortsWebviewPool instance = ShortsWebviewPool._();
+  ShortsWebviewPool._();
+
+  WebviewController? _controller;
+  bool _isInitializing = false;
+  bool _isReady = false;
+  String? _currentLoadedVideoId;
+  final ValueNotifier<bool> readyNotifier = ValueNotifier<bool>(false);
+
+  bool get isReady => _isReady && _controller != null;
+  WebviewController? get controller => _controller;
+
+  Future<void> prewarm() async {
+    if (_isReady || _isInitializing) return;
+    _isInitializing = true;
+    try {
+      final ctrl = WebviewController();
+      await ctrl.initialize();
+      await ctrl.setBackgroundColor(Colors.black);
+      _controller = ctrl;
+      _isReady = true;
+      readyNotifier.value = true;
+      debugPrint('[ShortsWebviewPool] WebView2 pre-warmed successfully.');
+    } catch (e) {
+      debugPrint('[ShortsWebviewPool] Prewarm error: $e');
+    } finally {
+      _isInitializing = false;
+    }
+  }
+
+  Future<void> loadVideo(String youtubeId) async {
+    if (_currentLoadedVideoId == youtubeId) return;
+
+    if (!_isReady) {
+      await prewarm();
+    }
+    if (_controller == null) return;
+
+    _currentLoadedVideoId = youtubeId;
+    final playerUrl =
+        '${ApiService.baseUrl}/player?v=$youtubeId&isShort=true';
+    try {
+      await _controller!.loadUrl(playerUrl);
+    } catch (e) {
+      debugPrint('[ShortsWebviewPool] Error loading video $youtubeId: $e');
+    }
+  }
+
+  void pause() {
+    if (_isReady && _controller != null && _currentLoadedVideoId != null) {
+      try {
+        _currentLoadedVideoId = null;
+        _controller!.loadUrl('about:blank');
+      } catch (_) {}
+    }
+  }
+}
+
 Widget buildShortsPlayer({
   Key? key,
   required String youtubeId,
@@ -39,10 +100,6 @@ class WindowsShortsPlayer extends StatefulWidget {
 }
 
 class _WindowsShortsPlayerState extends State<WindowsShortsPlayer> {
-  final _controller = WebviewController();
-  bool _isInitialized = false;
-  bool _hasError = false;
-
   @override
   void initState() {
     super.initState();
@@ -52,116 +109,39 @@ class _WindowsShortsPlayerState extends State<WindowsShortsPlayer> {
           widget.onWatched?.call();
         }
       });
+      _activateAndPlay();
     }
-    _initWebView();
   }
 
   @override
   void didUpdateWidget(covariant WindowsShortsPlayer oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.isActive != widget.isActive) {
-      if (widget.isActive) {
-        if (_isInitialized) {
-          _loadCurrentShort();
-          widget.onWatched?.call();
-        }
-      } else {
-        if (_isInitialized) {
-          try {
-            _controller.loadUrl('about:blank');
-          } catch (_) {}
-        }
-      }
-    } else if (widget.isActive && oldWidget.youtubeId != widget.youtubeId) {
-      if (_isInitialized) {
-        _loadCurrentShort();
-      }
+    if (widget.isActive && (!oldWidget.isActive || oldWidget.youtubeId != widget.youtubeId)) {
+      widget.onWatched?.call();
+      _activateAndPlay();
+    } else if (!widget.isActive && oldWidget.isActive) {
+      ShortsWebviewPool.instance.pause();
     }
   }
 
-  Future<void> _loadCurrentShort() async {
-    try {
-      final playerUrl =
-          '${ApiService.baseUrl}/player?v=${widget.youtubeId}&isShort=true';
-      await _controller.loadUrl(playerUrl);
-    } catch (e) {
-      debugPrint('[ShortsPlayer] Error loading short: $e');
-    }
-  }
-
-  Future<void> _initWebView() async {
-    try {
-      await _controller.initialize();
-      await _controller.setBackgroundColor(Colors.black);
-
-      if (widget.isActive) {
-        await _loadCurrentShort();
-      }
-
-      if (!mounted) return;
-      setState(() {
-        _isInitialized = true;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _hasError = true;
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    try {
-      _controller.loadUrl('about:blank');
-    } catch (_) {}
-    _controller.dispose();
-    super.dispose();
+  void _activateAndPlay() {
+    ShortsWebviewPool.instance.loadVideo(widget.youtubeId);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_hasError) {
-      return Container(
-        color: Colors.black,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.network(
-                'https://img.youtube.com/vi/${widget.youtubeId}/hqdefault.jpg',
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(
-                  Icons.play_circle_fill,
-                  color: AppColors.primaryGold,
-                  size: 64,
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Playback unavailable',
-                style: TextStyle(color: Colors.white70, fontSize: 13),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+    final thumbnailUrl =
+        'https://img.youtube.com/vi/${widget.youtubeId}/hqdefault.jpg';
 
     if (!widget.isActive) {
       return Container(
         color: Colors.black,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.network(
-              'https://img.youtube.com/vi/${widget.youtubeId}/hqdefault.jpg',
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const Center(
-                child: Icon(Icons.bolt, color: AppColors.primaryGold, size: 60),
-              ),
-            ),
-          ],
+        child: Image.network(
+          thumbnailUrl,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => const Center(
+            child: Icon(Icons.bolt, color: AppColors.primaryGold, size: 60),
+          ),
         ),
       );
     }
@@ -171,25 +151,30 @@ class _WindowsShortsPlayerState extends State<WindowsShortsPlayer> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (!_isInitialized)
-            Image.network(
-              'https://img.youtube.com/vi/${widget.youtubeId}/hqdefault.jpg',
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const Center(
-                child: Icon(Icons.bolt, color: AppColors.primaryGold, size: 60),
-              ),
+          // Background thumbnail prevents black flickers while new video buffers
+          Image.network(
+            thumbnailUrl,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => const Center(
+              child: Icon(Icons.bolt, color: AppColors.primaryGold, size: 60),
             ),
+          ),
 
-          if (!_isInitialized)
-            const Center(
-              child: CircularProgressIndicator(
-                color: AppColors.primaryGold,
-                strokeWidth: 3,
-              ),
-            ),
-
-          if (_isInitialized)
-            Webview(_controller),
+          // Active Shared WebView2
+          ValueListenableBuilder<bool>(
+            valueListenable: ShortsWebviewPool.instance.readyNotifier,
+            builder: (context, isReady, _) {
+              if (isReady && ShortsWebviewPool.instance.controller != null) {
+                return Webview(ShortsWebviewPool.instance.controller!);
+              }
+              return const Center(
+                child: CircularProgressIndicator(
+                  color: AppColors.primaryGold,
+                  strokeWidth: 3,
+                ),
+              );
+            },
+          ),
         ],
       ),
     );

@@ -8,6 +8,7 @@ import '../../models/reel_model.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/salah_schedule_widget.dart';
 import '../../widgets/video_player/in_app_player_modal.dart';
+import '../../widgets/qibla/qibla_compass_modal.dart';
 
 class HomeScreen extends StatelessWidget {
   final Function(int) onTabSelected;
@@ -143,7 +144,7 @@ class HomeScreen extends StatelessWidget {
       {
         'num': '1',
         'title': 'Wazu & Ghusal',
-        'urdu': 'وضو اور غسل',
+        'hindi': 'वज़ू और ग़ुस्ल',
         'icon': Icons.water_drop_outlined,
         'color': const Color(0xFF0D9488),
         'onTap': () {
@@ -153,8 +154,8 @@ class HomeScreen extends StatelessWidget {
       },
       {
         'num': '2',
-        'title': 'Namaz Ka Aasan Tarika',
-        'urdu': 'نماز کا آسان طریقہ',
+        'title': 'Namaz Ka Tarika',
+        'hindi': 'नमाज़ का आसान तरीक़ा',
         'icon': Icons.accessibility_new_rounded,
         'color': AppColors.primaryGold,
         'onTap': () {
@@ -165,7 +166,7 @@ class HomeScreen extends StatelessWidget {
       {
         'num': '3',
         'title': 'Aurat Ki Namaz',
-        'urdu': 'عورت کی نماز',
+        'hindi': 'औरत की नमाज़',
         'icon': Icons.person_outline_rounded,
         'color': const Color(0xFFEC4899),
         'onTap': () {
@@ -175,8 +176,8 @@ class HomeScreen extends StatelessWidget {
       },
       {
         'num': '4',
-        'title': 'Namaz ke Zaroori Masail',
-        'urdu': 'نماز کے ضروری مسائل',
+        'title': 'Namaz ke Masail',
+        'hindi': 'ज़रूरी मसाइल',
         'icon': Icons.help_outline_rounded,
         'color': const Color(0xFFF59E0B),
         'onTap': () {
@@ -186,19 +187,19 @@ class HomeScreen extends StatelessWidget {
       },
       {
         'num': '5',
-        'title': 'NAMAZ COURSE',
-        'urdu': 'مکمل نماز کورس',
-        'icon': Icons.workspace_premium_rounded,
-        'isCourse': true,
+        'title': 'Qibla Direction',
+        'hindi': 'क़िबला रुख़ (काबा)',
+        'icon': Icons.explore_rounded,
+        'isHighlight': true,
         'color': const Color(0xFFFFD700),
         'onTap': () {
-          onTabSelected(3); // Courses tab
+          QiblaCompassModal.show(context);
         },
       },
       {
         'num': '6',
         'title': 'Shariat ke Masail',
-        'urdu': 'شریعت کے مسائل',
+        'hindi': 'शरीअत के मसाइल',
         'icon': Icons.menu_book_rounded,
         'color': const Color(0xFF10B981),
         'onTap': () {
@@ -208,8 +209,8 @@ class HomeScreen extends StatelessWidget {
       },
       {
         'num': '7',
-        'title': 'Qaza Namaz Ka Tarika',
-        'urdu': 'قضا نماز کا طریقہ',
+        'title': 'Qaza Namaz',
+        'hindi': 'क़ज़ा नमाज़ का तरीक़ा',
         'icon': Icons.update_rounded,
         'color': const Color(0xFF6366F1),
         'onTap': () {
@@ -219,8 +220,8 @@ class HomeScreen extends StatelessWidget {
       },
       {
         'num': '8',
-        'title': 'Fatiha Dene ka tarika',
-        'urdu': 'فاتحہ دینے کا طریقہ',
+        'title': 'Fatiha Ka Tarika',
+        'hindi': 'फातिहा देने का तरीक़ा',
         'icon': Icons.volunteer_activism_outlined,
         'color': const Color(0xFF8B5CF6),
         'onTap': () {
@@ -230,8 +231,8 @@ class HomeScreen extends StatelessWidget {
       },
       {
         'num': '9',
-        'title': 'Imam Ke Peeche Namaz ka Tarika',
-        'urdu': 'امام کے پیچھے نماز',
+        'title': 'Imam Ke Peeche',
+        'hindi': 'इमाम के पीछे नमाज़',
         'icon': Icons.groups_rounded,
         'color': const Color(0xFF14B8A6),
         'onTap': () {
@@ -298,7 +299,7 @@ class HomeScreen extends StatelessWidget {
             ),
             itemBuilder: (context, index) {
               final b = blocks[index];
-              final bool isCourse = b['isCourse'] == true;
+              final bool isCourse = b['isHighlight'] == true || b['isCourse'] == true;
               final Color accentColor = b['color'] as Color;
 
               return Material(
@@ -379,9 +380,9 @@ class HomeScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
 
-                        // Urdu Subtitle
+                        // Hindi Subtitle
                         Text(
-                          b['urdu'] as String,
+                          (b['hindi'] ?? b['urdu'] ?? '') as String,
                           style: TextStyle(
                             color: isCourse
                                 ? AppColors.lightGold
