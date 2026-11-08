@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.islamic.hafizhasnain.hafiz_hasnain_app"
-    compileSdk = 35 // Stable Android 15 compileSdk (Never API 36 preview)
+    compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -20,16 +20,6 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
-
-        ndk {
-            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86_64"))
-        }
-    }
-
-    packaging {
-        jniLibs {
-            useLegacyPackaging = true
-        }
     }
 
     signingConfigs {

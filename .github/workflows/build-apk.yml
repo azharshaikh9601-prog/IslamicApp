@@ -72,8 +72,20 @@ jobs:
           KEY_ALIAS: "releasekey"
           KEY_PASSWORD: "android123"
         run: |
-          flutter build apk --release -v \
-            --dart-define=API_BASE_URL="${{ vars.API_BASE_URL || 'http://islamicsppapi.runasp.net/api' }}"
+          set -o pipefail
+          flutter build apk --release \
+            --dart-define=API_BASE_URL="${{ vars.API_BASE_URL || 'http://islamicsppapi.runasp.net/api' }}" 2>&1 | tee ../flutter_build.log || {
+              echo "::error::Flutter Build Failed! Last 150 lines of log:"
+              tail -n 150 ../flutter_build.log
+              exit 1
+            }
+
+      - name: Upload Build Log on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-build-failure-log
+          path: flutter_build.log
 
       - name: Validate, Diagnose & Prepare APK Deliverables
         working-directory: flutter_app
