@@ -72,7 +72,7 @@ jobs:
           KEY_ALIAS: "releasekey"
           KEY_PASSWORD: "android123"
         run: |
-          flutter build apk --release \
+          flutter build apk --release -v \
             --dart-define=API_BASE_URL="${{ vars.API_BASE_URL || 'http://islamicsppapi.runasp.net/api' }}"
 
       - name: Validate, Diagnose & Prepare APK Deliverables
