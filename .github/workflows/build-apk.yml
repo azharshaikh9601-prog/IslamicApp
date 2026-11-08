@@ -74,7 +74,7 @@ jobs:
         run: |
           set -o pipefail
           echo "=== Step A: Building Universal Release APK ==="
-          flutter build apk --release \
+          flutter build apk --release --no-tree-shake-icons \
             --dart-define=API_BASE_URL="${{ vars.API_BASE_URL || 'http://islamicsppapi.runasp.net/api' }}" 2>&1 | tee ../flutter_build.log || {
               echo "::error::Flutter Universal Build Failed! Last 150 lines of log:"
               tail -n 150 ../flutter_build.log
@@ -82,7 +82,7 @@ jobs:
             }
 
           echo "=== Step B: Building Split-per-ABI APKs (arm64-v8a for Android 15) ==="
-          flutter build apk --release --split-per-abi \
+          flutter build apk --release --split-per-abi --no-tree-shake-icons \
             --dart-define=API_BASE_URL="${{ vars.API_BASE_URL || 'http://islamicsppapi.runasp.net/api' }}" 2>&1 | tee -a ../flutter_build.log || true
 
       - name: Upload Build Log on Failure
