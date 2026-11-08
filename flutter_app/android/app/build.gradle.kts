@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.islamic.hafizhasnain.hafiz_hasnain_app"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 35 // Stable Android 15 release (eliminates API 36 preview codename)
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -15,7 +15,7 @@ android {
 
     defaultConfig {
         applicationId = "com.islamic.hafizhasnain.hafiz_hasnain_app"
-        minSdk = 21 // Universal Android 5.0+ compatibility
+        minSdk = 24 // Android 7.0+ (Universal modern Android compatibility)
         targetSdk = 34 // Stable Android 14 targetSdk across all consumer devices
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -41,6 +41,7 @@ android {
             }
             enableV1Signing = true
             enableV2Signing = true
+            enableV3Signing = true
         }
     }
 

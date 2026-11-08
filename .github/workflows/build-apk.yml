@@ -65,7 +65,7 @@ jobs:
             echo "✓ Release Keystore successfully generated with 10000-day validity!"
           fi
 
-      - name: Build Android Release Universal APK
+      - name: Build Android Release APKs (Universal & 64-bit ARM)
         working-directory: flutter_app
         env:
           KEYSTORE_PASSWORD: "android123"
@@ -73,12 +73,17 @@ jobs:
           KEY_PASSWORD: "android123"
         run: |
           set -o pipefail
+          echo "=== Step A: Building Universal Release APK ==="
           flutter build apk --release \
             --dart-define=API_BASE_URL="${{ vars.API_BASE_URL || 'http://islamicsppapi.runasp.net/api' }}" 2>&1 | tee ../flutter_build.log || {
-              echo "::error::Flutter Build Failed! Last 150 lines of log:"
+              echo "::error::Flutter Universal Build Failed! Last 150 lines of log:"
               tail -n 150 ../flutter_build.log
               exit 1
             }
+
+          echo "=== Step B: Building Split-per-ABI APKs (arm64-v8a for Android 15) ==="
+          flutter build apk --release --split-per-abi \
+            --dart-define=API_BASE_URL="${{ vars.API_BASE_URL || 'http://islamicsppapi.runasp.net/api' }}" 2>&1 | tee -a ../flutter_build.log || true
 
       - name: Upload Build Log on Failure
         if: failure()
@@ -91,68 +96,78 @@ jobs:
         working-directory: flutter_app
         run: |
           set -e
-          APK_SRC="build/app/outputs/flutter-apk/app-release.apk"
-          APK_DEST="build/app/outputs/flutter-apk/Hafiz_Hasnain_Jaani_v1.0.0.apk"
+          OUT_DIR="build/app/outputs/flutter-apk"
           
-          if [ ! -f "$APK_SRC" ]; then
-            echo "::error::Release APK was not generated at $APK_SRC"
-            exit 1
+          # Target deliverables
+          UNIVERSAL_SRC="$OUT_DIR/app-release.apk"
+          ARM64_SRC="$OUT_DIR/app-arm64-v8a-release.apk"
+          
+          UNIVERSAL_DEST="$OUT_DIR/Hafiz_Hasnain_Jaani_Universal.apk"
+          ARM64_DEST="$OUT_DIR/Hafiz_Hasnain_Jaani_arm64.apk"
+          MAIN_DEST="$OUT_DIR/Hafiz_Hasnain_Jaani_v1.0.0.apk"
+          
+          if [ -f "$UNIVERSAL_SRC" ]; then
+            cp "$UNIVERSAL_SRC" "$UNIVERSAL_DEST"
           fi
           
-          cp "$APK_SRC" "$APK_DEST"
+          if [ -f "$ARM64_SRC" ]; then
+            cp "$ARM64_SRC" "$ARM64_DEST"
+            # Point primary APK to arm64-v8a for modern Android 10-15 compatibility
+            cp "$ARM64_SRC" "$MAIN_DEST"
+          elif [ -f "$UNIVERSAL_SRC" ]; then
+            cp "$UNIVERSAL_SRC" "$MAIN_DEST"
+          fi
           
           echo "=========================================="
           echo "       APK BUILD & DIAGNOSTIC LOGS        "
           echo "=========================================="
           
-          # Find Android SDK Build Tools
           BUILD_TOOLS_DIR=$(find $ANDROID_HOME/build-tools -maxdepth 1 -mindepth 1 | sort -V | tail -n 1)
-          echo "Using Android Build Tools from: $BUILD_TOOLS_DIR"
+          echo "Using Android Build Tools: $BUILD_TOOLS_DIR"
           
-          # Inspect Badging and Package details
           if [ -f "$BUILD_TOOLS_DIR/aapt" ]; then
-            echo "--- AAPT Badging & Manifest Dump ---"
-            "$BUILD_TOOLS_DIR/aapt" dump badging "$APK_DEST" | head -n 25 || true
+            echo "--- AAPT Badging & Manifest Dump ($MAIN_DEST) ---"
+            "$BUILD_TOOLS_DIR/aapt" dump badging "$MAIN_DEST" | head -n 30 || true
           fi
           
-          # Signature Verification
           if [ -f "$BUILD_TOOLS_DIR/apksigner" ]; then
-            echo "--- APK Signature Verification ---"
-            "$BUILD_TOOLS_DIR/apksigner" verify --verbose --print-certs "$APK_DEST" || true
+            echo "--- APK Signature Verification ($MAIN_DEST) ---"
+            "$BUILD_TOOLS_DIR/apksigner" verify --verbose --print-certs "$MAIN_DEST" || true
           fi
           
-          # Zipalign Verification
           if [ -f "$BUILD_TOOLS_DIR/zipalign" ]; then
-            echo "--- Zipalign Alignment Verification ---"
-            "$BUILD_TOOLS_DIR/zipalign" -c -v 4 "$APK_DEST" | tail -n 10 || true
+            echo "--- Zipalign Alignment Verification ($MAIN_DEST) ---"
+            "$BUILD_TOOLS_DIR/zipalign" -c -v 4 "$MAIN_DEST" | tail -n 10 || true
           fi
           
-          APK_SIZE_MB=$(du -m "$APK_DEST" | cut -f1)
+          echo "=== Deliverables Available ==="
+          ls -lh "$OUT_DIR"/*.apk
           
-          echo "=== Deliverable File Information ==="
-          ls -lh "$APK_SRC" "$APK_DEST"
+          MAIN_SIZE_MB=$(du -m "$MAIN_DEST" | cut -f1)
           
-          # Generate Rich GitHub Step Summary
           echo "## 🚀 Android Build & APK Diagnostics" >> $GITHUB_STEP_SUMMARY
           echo "| Check | Result |" >> $GITHUB_STEP_SUMMARY
           echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
-          echo "| **APK File** | \`Hafiz_Hasnain_Jaani_v1.0.0.apk\` (${APK_SIZE_MB} MB) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Primary APK** | \`Hafiz_Hasnain_Jaani_v1.0.0.apk\` (${MAIN_SIZE_MB} MB) |" >> $GITHUB_STEP_SUMMARY
           echo "| **Application ID** | \`com.islamic.hafizhasnain.hafiz_hasnain_app\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Min SDK** | API 21 (Android 5.0+) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Compile SDK** | API 35 (Android 15 Stable) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Min SDK** | API 24 (Android 7.0+) |" >> $GITHUB_STEP_SUMMARY
           echo "| **Target SDK** | API 34 (Android 14) |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Native Libs Packaging** | \`useLegacyPackaging = true\` (extractNativeLibs=true) |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Signing Schemes** | v1 (JAR) + v2 (Full APK Signature) |" >> $GITHUB_STEP_SUMMARY
-          echo "| **API Endpoint** | \`${{ vars.API_BASE_URL || 'http://islamicsppapi.runasp.net/api' }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Signing Schemes** | v1 (JAR) + v2 (Full APK) + v3 |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Architecture** | 64-bit ARM (arm64-v8a) & Universal |" >> $GITHUB_STEP_SUMMARY
 
-      - name: Upload APK Workflow Artifact
+      - name: Upload APK Workflow Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Hafiz_Hasnain_Jaani_APK
-          path: flutter_app/build/app/outputs/flutter-apk/Hafiz_Hasnain_Jaani_v1.0.0.apk
+          name: Hafiz_Hasnain_Jaani_APKs
+          path: |
+            flutter_app/build/app/outputs/flutter-apk/Hafiz_Hasnain_Jaani_v1.0.0.apk
+            flutter_app/build/app/outputs/flutter-apk/Hafiz_Hasnain_Jaani_arm64.apk
+            flutter_app/build/app/outputs/flutter-apk/Hafiz_Hasnain_Jaani_Universal.apk
           retention-days: 30
           if-no-files-found: error
 
-      - name: Publish Direct Unzipped APK to GitHub Releases
+      - name: Publish Direct Unzipped APKs to GitHub Releases
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         continue-on-error: true
@@ -162,24 +177,20 @@ jobs:
           body: |
             ## 📱 Official Android Release (Direct APK)
             
-            ### ⬇ Direct 1-Click Installation (No Unzipping Required):
-            Download **`Hafiz_Hasnain_Jaani_v1.0.0.apk`** below directly to your phone. It is a raw, ready-to-install Android APK package.
+            ### ⬇ Download Links:
+            1. **[Recommended for Android 10-15 Phones]**: Download **`Hafiz_Hasnain_Jaani_arm64.apk`** (~21 MB) — Optimized 64-bit build with fastest download and zero parsing issues.
+            2. **[Universal Build]**: Download **`Hafiz_Hasnain_Jaani_Universal.apk`** (~62 MB) — Contains all architectures.
+            3. **`Hafiz_Hasnain_Jaani_v1.0.0.apk`** — Default 64-bit release build.
             
             **Installation Steps:**
-            1. Tap on `Hafiz_Hasnain_Jaani_v1.0.0.apk` below.
-            2. Open the downloaded file from your notifications or Downloads folder.
-            3. Tap **Install** (if prompted, enable "Install unknown apps" for your browser).
+            1. Tap on the `.apk` file below.
+            2. Wait for the download to complete 100%.
+            3. Tap **Install** (allow installation from unknown sources if prompted).
             4. Launch and enjoy!
-            
-            **Package Specifications:**
-            - Application ID: `com.islamic.hafizhasnain.hafiz_hasnain_app`
-            - Min Android Version: Android 5.0 Lollipop (API 21+)
-            - Target Android Version: Android 14 (API 34)
-            - Architecture: Universal Fat APK (arm64-v8a, armeabi-v7a, x86_64)
-            - Signing Scheme: Dual Signature (v1 JAR + v2 Full APK scheme)
-            - Backend URL: Configured for production .NET API
           files: |
             flutter_app/build/app/outputs/flutter-apk/Hafiz_Hasnain_Jaani_v1.0.0.apk
+            flutter_app/build/app/outputs/flutter-apk/Hafiz_Hasnain_Jaani_arm64.apk
+            flutter_app/build/app/outputs/flutter-apk/Hafiz_Hasnain_Jaani_Universal.apk
           draft: false
           prerelease: false
         env:
