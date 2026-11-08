@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.islamic.hafizhasnain.hafiz_hasnain_app"
-    compileSdk = 35 // Stable Android 15 release (eliminates API 36 preview codename)
+    compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -41,7 +41,6 @@ android {
             }
             enableV1Signing = true
             enableV2Signing = true
-            enableV3Signing = true
         }
     }
 
