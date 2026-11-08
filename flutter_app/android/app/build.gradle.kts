@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.islamic.hafizhasnain.hafiz_hasnain_app"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 35 // Stable Android 15 compileSdk (Never API 36 preview)
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -16,13 +16,22 @@ android {
     defaultConfig {
         applicationId = "com.islamic.hafizhasnain.hafiz_hasnain_app"
         minSdk = 21 // Universal Android 5.0+ compatibility
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 34 // Stable Android 14 targetSdk across all consumer devices
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
 
         ndk {
             abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86_64"))
+        }
+    }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+        jniLibs {
+            useLegacyPackaging = true // Critical fix: avoids unaligned mmap parse failures
         }
     }
 

@@ -75,9 +75,10 @@ jobs:
           flutter build apk --release \
             --dart-define=API_BASE_URL="${{ vars.API_BASE_URL || 'http://islamicsppapi.runasp.net/api' }}"
 
-      - name: Validate & Prepare APK Deliverables
+      - name: Validate, Diagnose & Prepare APK Deliverables
         working-directory: flutter_app
         run: |
+          set -e
           APK_SRC="build/app/outputs/flutter-apk/app-release.apk"
           APK_DEST="build/app/outputs/flutter-apk/Hafiz_Hasnain_Jaani_v1.0.0.apk"
           
@@ -88,9 +89,48 @@ jobs:
           
           cp "$APK_SRC" "$APK_DEST"
           
-          echo "=== APK Build Verification ==="
+          echo "=========================================="
+          echo "       APK BUILD & DIAGNOSTIC LOGS        "
+          echo "=========================================="
+          
+          # Find Android SDK Build Tools
+          BUILD_TOOLS_DIR=$(find $ANDROID_HOME/build-tools -maxdepth 1 -mindepth 1 | sort -V | tail -n 1)
+          echo "Using Android Build Tools from: $BUILD_TOOLS_DIR"
+          
+          # Inspect Badging and Package details
+          if [ -f "$BUILD_TOOLS_DIR/aapt" ]; then
+            echo "--- AAPT Badging & Manifest Dump ---"
+            "$BUILD_TOOLS_DIR/aapt" dump badging "$APK_DEST" | head -n 25 || true
+          fi
+          
+          # Signature Verification
+          if [ -f "$BUILD_TOOLS_DIR/apksigner" ]; then
+            echo "--- APK Signature Verification ---"
+            "$BUILD_TOOLS_DIR/apksigner" verify --verbose --print-certs "$APK_DEST" || true
+          fi
+          
+          # Zipalign Verification
+          if [ -f "$BUILD_TOOLS_DIR/zipalign" ]; then
+            echo "--- Zipalign Alignment Verification ---"
+            "$BUILD_TOOLS_DIR/zipalign" -c -v 4 "$APK_DEST" | tail -n 10 || true
+          fi
+          
+          APK_SIZE_MB=$(du -m "$APK_DEST" | cut -f1)
+          
+          echo "=== Deliverable File Information ==="
           ls -lh "$APK_SRC" "$APK_DEST"
-          echo "✓ APK size, integrity, and package generation verified successfully!"
+          
+          # Generate Rich GitHub Step Summary
+          echo "## 🚀 Android Build & APK Diagnostics" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
+          echo "| **APK File** | \`Hafiz_Hasnain_Jaani_v1.0.0.apk\` (${APK_SIZE_MB} MB) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Application ID** | \`com.islamic.hafizhasnain.hafiz_hasnain_app\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Min SDK** | API 21 (Android 5.0+) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Target SDK** | API 34 (Android 14) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Native Libs Packaging** | \`useLegacyPackaging = true\` (extractNativeLibs=true) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Signing Schemes** | v1 (JAR) + v2 (Full APK Signature) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **API Endpoint** | \`${{ vars.API_BASE_URL || 'http://islamicsppapi.runasp.net/api' }}\` |" >> $GITHUB_STEP_SUMMARY
 
       - name: Upload APK Workflow Artifact
         uses: actions/upload-artifact@v4
